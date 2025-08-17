@@ -8,6 +8,21 @@ import { FeedbackService, IFeedbackService } from './feedbackService';
 
 /**
  * Core Git service interface defining all Git operations
+ * 
+ * This interface provides a comprehensive set of Git operations including:
+ * - Branch management (create, checkout, rename, list)
+ * - Repository operations (fetch, pull, push, commit, merge, rebase)
+ * - Advanced operations (reset, stash, tag management)
+ * - Remote management (add, remove, list remotes)
+ * - File operations (history, diff, revert, annotate)
+ * - Conflict detection and resolution
+ * 
+ * @example
+ * ```typescript
+ * const gitService = new GitService(feedbackService);
+ * const branches = await gitService.getBranches();
+ * await gitService.createBranch('feature/new-feature');
+ * ```
  */
 export interface IGitService {
     // Branch operations
@@ -72,11 +87,49 @@ export interface IGitService {
 
 /**
  * Git service implementation using VS Code Git API
+ * 
+ * This class provides the core Git functionality for the JetGit extension.
+ * It integrates with VS Code's built-in Git extension and provides additional
+ * features like conflict resolution, branch grouping, and enhanced file operations.
+ * 
+ * @remarks
+ * The GitService uses VS Code's Git API when available and falls back to direct
+ * Git command execution when necessary. It provides comprehensive error handling
+ * and user feedback through the FeedbackService.
+ * 
+ * Key features:
+ * - Automatic conflict detection and resolution
+ * - Branch hierarchy and grouping
+ * - Progress tracking for long-running operations
+ * - Integration with VS Code's Git status indicators
+ * 
+ * @example
+ * ```typescript
+ * const feedbackService = new FeedbackService();
+ * const gitService = new GitService(feedbackService);
+ * 
+ * // Get all branches with grouping
+ * const branches = await gitService.getBranches();
+ * 
+ * // Create and checkout a new branch
+ * await gitService.createBranch('feature/user-auth', 'main');
+ * await gitService.checkoutBranch('feature/user-auth');
+ * 
+ * // Perform merge with automatic conflict resolution
+ * await gitService.merge('main');
+ * ```
  */
 export class GitService implements IGitService {
+    /** VS Code Git extension instance */
     private gitExtension: vscode.Extension<any> | undefined;
+    
+    /** VS Code Git API instance */
     private git: any;
+    
+    /** Error handling utility */
     private errorHandler: ErrorHandler;
+    
+    /** Conflict resolution service */
     private conflictResolver: ConflictResolver;
     private dialogService: DialogService;
     private feedbackService: IFeedbackService;

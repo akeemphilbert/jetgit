@@ -112,7 +112,7 @@ describe('Advanced End-to-End Workflow Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockContext = { subscriptions: [] };
-    
+
     gitService = new GitService();
     gitMenuProvider = new GitMenuProvider(gitService);
     contextMenuProvider = new ContextMenuProvider(gitService);
@@ -124,7 +124,7 @@ describe('Advanced End-to-End Workflow Tests', () => {
   describe('Complex Branch Management Workflows', () => {
     it('should complete feature branch workflow with multiple operations', async () => {
       const vscode = require('vscode');
-      
+
       // Step 1: Start with main branch
       jest.spyOn(gitService, 'getBranches').mockResolvedValue([
         {
@@ -312,10 +312,10 @@ describe('Advanced End-to-End Workflow Tests', () => {
 
         // Step 4: Attempt automatic resolution
         const resolvedConflicts = await conflictResolver.resolveConflicts(error.conflicts);
-        
+
         // First conflict: both sides changed the same function call - needs manual resolution
         expect(resolvedConflicts[0].isResolved).toBe(false);
-        
+
         // Second conflict: simple URL change - can be auto-resolved
         expect(resolvedConflicts[1].isResolved).toBe(true);
         expect(resolvedConflicts[1].resolution).toBe('incoming'); // Prefer newer API URL
@@ -369,11 +369,11 @@ describe('Advanced End-to-End Workflow Tests', () => {
         await gitService.rebase('main');
       } catch (error: any) {
         expect(error.code).toBe('REBASE_CONFLICTS');
-        
+
         // Step 2: Show interactive conflict resolution
         const vscode = require('vscode');
         vscode.window.showWarningMessage.mockResolvedValue('Resolve Conflicts');
-        
+
         // Step 3: Open diff viewer for each conflicted file
         for (const file of error.files) {
           const mockDiff = {
@@ -384,7 +384,7 @@ describe('Advanced End-to-End Workflow Tests', () => {
             hasConflicts: true,
             conflicts: error.conflicts,
           };
-          
+
           jest.spyOn(gitService, 'getFileDiff').mockResolvedValue(mockDiff);
           await diffViewer.showFileDiff(file);
         }
@@ -392,7 +392,7 @@ describe('Advanced End-to-End Workflow Tests', () => {
         // Step 4: Continue rebase after resolution
         jest.spyOn(gitService, 'rebaseContinue').mockResolvedValue();
         await gitService.rebaseContinue();
-        
+
         expect(gitService.rebaseContinue).toHaveBeenCalled();
       }
     });

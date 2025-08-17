@@ -8,17 +8,55 @@ import { StatusIntegrationService } from './services/statusIntegrationService';
 import { CommandRegistrationService } from './services/commandRegistrationService';
 import { FeedbackService } from './services/feedbackService';
 
+/**
+ * JetGit Extension - JetBrains IDE-style Git functionality for VS Code
+ * 
+ * This extension provides enhanced Git functionality including:
+ * - Hierarchical branch management with intelligent grouping
+ * - Comprehensive context menus for Git operations
+ * - Advanced diff viewer with automatic conflict resolution
+ * - Seamless VS Code integration
+ */
+
+/** Core Git service for repository operations */
 let gitService: GitService;
+
+/** Controller for the main Git menu and branch hierarchy */
 let gitMenuController: GitMenuController;
+
+/** Provider for context menu Git operations */
 let contextMenuProvider: ContextMenuProvider;
+
+/** Custom diff viewer with conflict resolution */
 let diffViewer: DiffViewer;
+
+/** Service for user input dialogs and prompts */
 let dialogService: DialogService;
+
+/** Service for VS Code status bar and Git integration */
 let statusIntegrationService: StatusIntegrationService;
+
+/** Service for registering and managing VS Code commands */
 let commandRegistrationService: CommandRegistrationService;
+
+/** Service for user feedback and progress notifications */
 let feedbackService: FeedbackService;
 
 /**
- * Extension activation function
+ * Activates the JetGit extension
+ * 
+ * This function is called when the extension is activated by VS Code.
+ * It initializes all services, registers commands, and sets up the UI components.
+ * 
+ * @param context - The VS Code extension context providing access to extension APIs
+ * @throws Will show an error message to the user if activation fails
+ * 
+ * @example
+ * ```typescript
+ * // Called automatically by VS Code when extension activates
+ * // Activation events are defined in package.json:
+ * // "activationEvents": ["onStartupFinished"]
+ * ```
  */
 export function activate(context: vscode.ExtensionContext) {
     console.log('JetGit Extension is now active');
@@ -65,7 +103,25 @@ export function activate(context: vscode.ExtensionContext) {
 
 
 /**
- * Extension deactivation function
+ * Deactivates the JetGit extension
+ * 
+ * This function is called when the extension is being deactivated or VS Code is shutting down.
+ * It performs cleanup of all services, disposes of resources, and clears references to prevent memory leaks.
+ * 
+ * @remarks
+ * The deactivation process includes:
+ * - Disposing of all services that implement the Disposable interface
+ * - Clearing service references to prevent memory leaks
+ * - Logging the deactivation process for debugging
+ * 
+ * @example
+ * ```typescript
+ * // Called automatically by VS Code when:
+ * // - Extension is disabled
+ * // - Extension is uninstalled
+ * // - VS Code is shutting down
+ * // - Workspace is closed (if extension is workspace-specific)
+ * ```
  */
 export function deactivate() {
     console.log('JetGit Extension is being deactivated');

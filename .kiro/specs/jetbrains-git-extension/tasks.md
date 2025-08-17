@@ -120,7 +120,7 @@
   - Write tests for error scenarios and recovery paths
   - _Requirements: 2.4, 6.4_
 
-- [ ] 17. Create comprehensive test suite
+- [x] 17. Create comprehensive test suite
   - Write unit tests for all GitService methods and utilities
   - Add integration tests for VS Code API interactions
   - Create end-to-end tests for complete user workflows
@@ -128,7 +128,7 @@
   - Set up continuous integration testing pipeline
   - _Requirements: 6.2, 6.3_
 
-- [ ] 18. Add documentation and examples
+- [x] 18. Add documentation and examples
   - Create README with installation and usage instructions
   - Add inline code documentation and JSDoc comments
   - Create example workflows and screenshots

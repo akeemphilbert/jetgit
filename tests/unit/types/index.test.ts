@@ -1,4 +1,4 @@
-import * as types from '../../../src/types/index';
+import * as types from '../../../src/types/git';
 import { 
   Branch, 
   Remote, 
@@ -11,7 +11,7 @@ import {
   GitError,
   DiffHunk,
   DiffLine
-} from '../../../src/types/index';
+} from '../../../src/types/git';
 
 describe('Types Index', () => {
   describe('exports', () => {

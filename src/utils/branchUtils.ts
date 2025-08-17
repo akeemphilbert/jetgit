@@ -2,10 +2,22 @@ import { Branch, BranchGroup } from '../types/git';
 
 /**
  * Utility functions for branch operations and grouping
+ * 
+ * This module provides utilities for organizing and validating Git branches,
+ * particularly for creating hierarchical displays similar to JetBrains IDEs.
+ * It includes functions for branch grouping, validation, and naming conventions.
  */
 
 /**
  * Common branch prefixes that should be grouped together
+ * 
+ * These prefixes are commonly used in Git workflows and will be automatically
+ * grouped in the branch hierarchy display. The grouping helps organize branches
+ * by their purpose and makes navigation easier in repositories with many branches.
+ * 
+ * @remarks
+ * The prefixes are ordered by frequency of use. Additional prefixes can be
+ * detected dynamically if they follow the pattern `prefix/branch-name`.
  */
 const COMMON_PREFIXES = [
     'feature/',
@@ -27,9 +39,32 @@ const COMMON_PREFIXES = [
 ];
 
 /**
- * Group branches by their prefixes for hierarchical display
- * @param branches Array of branches to group
- * @returns Array of branch groups with ungrouped branches
+ * Groups branches by their prefixes for hierarchical display
+ * 
+ * This function analyzes branch names and groups them by common prefixes
+ * (e.g., feature/, bugfix/, hotfix/) to create a hierarchical structure
+ * similar to JetBrains IDEs. Branches without recognized prefixes are
+ * returned as ungrouped.
+ * 
+ * @param branches - Array of branches to group
+ * @returns Object containing grouped branches and ungrouped branches
+ * 
+ * @example
+ * ```typescript
+ * const branches = [
+ *   { name: 'main', type: 'local', isActive: true },
+ *   { name: 'feature/auth', type: 'local', isActive: false },
+ *   { name: 'feature/ui', type: 'local', isActive: false },
+ *   { name: 'bugfix/login', type: 'local', isActive: false }
+ * ];
+ * 
+ * const { groups, ungrouped } = groupBranches(branches);
+ * // groups: [
+ * //   { prefix: 'feature/', branches: [feature/auth, feature/ui], isCollapsed: false },
+ * //   { prefix: 'bugfix/', branches: [bugfix/login], isCollapsed: false }
+ * // ]
+ * // ungrouped: [main]
+ * ```
  */
 export function groupBranches(branches: Branch[]): { groups: BranchGroup[], ungrouped: Branch[] } {
     const groups: Map<string, Branch[]> = new Map();
@@ -150,9 +185,36 @@ export function getActiveBranch(branches: Branch[]): Branch | undefined {
 }
 
 /**
- * Validate branch name according to Git naming rules
- * @param name The branch name to validate
- * @returns Object with isValid flag and error message if invalid
+ * Validates a branch name according to Git naming rules
+ * 
+ * This function checks if a branch name follows Git's naming conventions
+ * and restrictions. It validates against common Git branch naming rules
+ * including character restrictions, format requirements, and reserved names.
+ * 
+ * @param name - The branch name to validate
+ * @returns Object containing validation result and error message if invalid
+ * 
+ * @remarks
+ * Git branch naming rules enforced:
+ * - Cannot be empty or contain only whitespace
+ * - Cannot contain: `<>:"|?*` characters
+ * - Cannot start with `-` or end with `.`
+ * - Cannot contain `..` (double dots)
+ * - Cannot contain spaces or control characters
+ * - Cannot be reserved names like `HEAD`, `ORIG_HEAD`
+ * - Cannot end with `.lock`
+ * 
+ * @example
+ * ```typescript
+ * const result1 = validateBranchName('feature/user-auth');
+ * // { isValid: true }
+ * 
+ * const result2 = validateBranchName('invalid<branch>');
+ * // { isValid: false, error: 'Branch name contains invalid characters' }
+ * 
+ * const result3 = validateBranchName('');
+ * // { isValid: false, error: 'Branch name cannot be empty' }
+ * ```
  */
 export function validateBranchName(name: string): { isValid: boolean; error?: string } {
     if (!name || name.trim() === '') {

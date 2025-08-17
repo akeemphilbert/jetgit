@@ -5,13 +5,45 @@ import { DialogService } from '../services/dialogService';
 
 /**
  * Context menu provider for Git operations
- * Provides comprehensive Git functionality through right-click context menus
+ * 
+ * Provides comprehensive Git functionality through right-click context menus,
+ * similar to JetBrains IDEs. The context menu is organized into logical groups:
+ * - Repository operations (push, pull, fetch, merge, rebase)
+ * - Branch management (branches, new branch, new tag)
+ * - File operations (history, compare, annotate, revert)
+ * - Advanced operations (reset, stash, remotes)
+ * 
+ * @remarks
+ * The ContextMenuProvider integrates with VS Code's context menu system
+ * through the package.json configuration. It provides context-sensitive
+ * operations that are available based on the current file/folder selection
+ * and repository state.
+ * 
+ * All operations include proper error handling, user feedback, and integration
+ * with the GitService for actual Git operations.
+ * 
+ * @example
+ * ```typescript
+ * const gitService = new GitService(feedbackService);
+ * const contextProvider = new ContextMenuProvider(gitService);
+ * contextProvider.registerCommands(context);
+ * ```
  */
 export class ContextMenuProvider {
+    /** Git service for repository operations */
     private gitService: GitService;
+    
+    /** Error handling utility */
     private errorHandler: ErrorHandler;
+    
+    /** Dialog service for user input */
     private dialogService: DialogService;
 
+    /**
+     * Creates a new ContextMenuProvider instance
+     * 
+     * @param gitService - The Git service instance for repository operations
+     */
     constructor(gitService: GitService) {
         this.gitService = gitService;
         this.errorHandler = new ErrorHandler();
@@ -19,7 +51,24 @@ export class ContextMenuProvider {
     }
 
     /**
-     * Register all context menu commands
+     * Registers all context menu commands with VS Code
+     * 
+     * This method registers all Git context menu commands with the VS Code
+     * command system. The commands are organized into groups and bound to
+     * their respective handler methods.
+     * 
+     * @param context - The VS Code extension context for command registration
+     * 
+     * @remarks
+     * The registered commands correspond to the menu structure defined in
+     * package.json under the "jetgit.context.submenu" section. Each command
+     * is bound to a specific handler method that performs the Git operation.
+     * 
+     * Command groups:
+     * - Repository: pull, push, fetch, merge, rebase
+     * - Branch: branches, newBranch, newTag
+     * - File: showHistory, showCurrentVersion, compareWithBranch, etc.
+     * - Advanced: resetHead, stashChanges, unstashChanges, manageRemotes
      */
     registerCommands(context: vscode.ExtensionContext): void {
         // Repository Operations

@@ -4,18 +4,64 @@ import { GitService } from '../services/gitService';
 
 /**
  * Controller for managing the Git dropdown menu using VS Code QuickPick
+ * 
+ * This class provides the main interface for displaying and interacting with
+ * the JetGit menu system. It creates a hierarchical menu structure similar
+ * to JetBrains IDEs, with support for branch grouping, common tasks, and
+ * contextual operations.
+ * 
+ * @remarks
+ * The GitMenuController uses VS Code's QuickPick API to create an interactive
+ * menu system that supports:
+ * - Hierarchical navigation with breadcrumbs
+ * - Branch grouping by prefixes (feature/, bugfix/, etc.)
+ * - Common task shortcuts at the top level
+ * - Branch-specific operations (create, rename, push, etc.)
+ * - Visual indicators for current branch and remote branches
+ * 
+ * @example
+ * ```typescript
+ * const gitService = new GitService(feedbackService);
+ * const controller = new GitMenuController(gitService);
+ * 
+ * // Show the main Git menu
+ * await controller.showGitMenu();
+ * 
+ * // Show branch-specific operations
+ * await controller.showBranchOperations('feature/user-auth');
+ * ```
  */
 export class GitMenuController {
+    /** Provider for building menu structure and items */
     private gitMenuProvider: GitMenuProvider;
+    
+    /** Git service for repository operations */
     private gitService: GitService;
 
+    /**
+     * Creates a new GitMenuController instance
+     * 
+     * @param gitService - The Git service instance for repository operations
+     */
     constructor(gitService: GitService) {
         this.gitService = gitService;
         this.gitMenuProvider = new GitMenuProvider(gitService);
     }
 
     /**
-     * Show the main Git menu using QuickPick
+     * Shows the main Git menu using VS Code's QuickPick interface
+     * 
+     * This method displays the top-level Git menu with common tasks,
+     * branch hierarchy, and navigation options. The menu is built
+     * dynamically based on the current repository state.
+     * 
+     * @throws {Error} When Git menu cannot be built or displayed
+     * 
+     * @example
+     * ```typescript
+     * const controller = new GitMenuController(gitService);
+     * await controller.showGitMenu();
+     * ```
      */
     async showGitMenu(): Promise<void> {
         try {
