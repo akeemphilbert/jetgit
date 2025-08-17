@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { GitService } from './gitService';
 import { MenuController } from '../providers/gitMenuController';
 import { ContextMenuProvider } from '../providers/contextMenuProvider';
+import { SCMTreeProvider } from '../providers/scmTreeProvider';
 import { DiffViewer } from '../views/diffViewer';
 import { DialogService } from './dialogService';
 import { StatusBarService } from './statusBarService';
@@ -13,6 +14,7 @@ export class CommandRegistrationService {
     private gitService: GitService;
     private menuController: MenuController;
     private contextMenuProvider: ContextMenuProvider;
+    private scmTreeProvider?: SCMTreeProvider;
     private diffViewer: DiffViewer;
     private dialogService: DialogService;
     private statusBarService: StatusBarService;
@@ -24,11 +26,13 @@ export class CommandRegistrationService {
         contextMenuProvider: ContextMenuProvider,
         diffViewer: DiffViewer,
         dialogService: DialogService,
-        statusBarService: StatusBarService
+        statusBarService: StatusBarService,
+        scmTreeProvider?: SCMTreeProvider
     ) {
         this.gitService = gitService;
         this.menuController = menuController;
         this.contextMenuProvider = contextMenuProvider;
+        this.scmTreeProvider = scmTreeProvider;
         this.diffViewer = diffViewer;
         this.dialogService = dialogService;
         this.statusBarService = statusBarService;
@@ -49,6 +53,9 @@ export class CommandRegistrationService {
         
         // Register context menu commands
         this.contextMenuProvider.registerCommands(context);
+        
+        // Register SCM view commands
+        this.registerSCMCommands(context);
         
         // Register utility commands
         this.registerUtilityCommands(context);
@@ -161,7 +168,33 @@ export class CommandRegistrationService {
                 id: 'jbGit.updateProject',
                 handler: async (repository?: any) => {
                     try {
-                        await this.gitService.pull();
+                        const config = vscode.workspace.getConfiguration('jbGit');
+                        const mode = config.get<string>('updateProject.mode', 'pullRebase');
+                        
+                        switch (mode) {
+                            case 'pull':
+                                await this.gitService.pull();
+                                break;
+                            case 'pullRebase':
+                                // First fetch, then rebase
+                                await this.gitService.fetch();
+                                const currentBranch = await this.gitService.getCurrentBranch();
+                                if (currentBranch) {
+                                    const branches = await this.gitService.getBranches();
+                                    const branch = branches.find(b => b.name === currentBranch && b.type === 'local');
+                                    if (branch?.upstream) {
+                                        await this.gitService.rebase(branch.upstream);
+                                    }
+                                }
+                                break;
+                            case 'fetchRebaseInteractive':
+                                await this.gitService.fetch();
+                                vscode.window.showInformationMessage('Fetch completed. Please manually rebase if needed.');
+                                break;
+                            default:
+                                await this.gitService.pull();
+                        }
+                        
                         await this.statusBarService.notifyGitOperation('Update Project');
                         vscode.window.showInformationMessage('Project updated successfully');
                     } catch (error) {
@@ -352,6 +385,142 @@ export class CommandRegistrationService {
                         vscode.window.showErrorMessage(`Failed to rename branch: ${error instanceof Error ? error.message : 'Unknown error'}`);
                     }
                 }
+            },
+            // Branch selection actions
+            {
+                id: 'jbGit.mergeBranch',
+                handler: async (branchName: string) => {
+                    try {
+                        const currentBranch = await this.gitService.getCurrentBranch();
+                        if (currentBranch === branchName) {
+                            vscode.window.showWarningMessage('Cannot merge a branch into itself');
+                            return;
+                        }
+
+                        const confirmation = await vscode.window.showWarningMessage(
+                            `Merge '${branchName}' into '${currentBranch}'?`,
+                            { modal: true },
+                            'Merge'
+                        );
+
+                        if (confirmation === 'Merge') {
+                            await this.gitService.merge(branchName);
+                            await this.statusBarService.notifyGitOperation('Merge Branch');
+                            vscode.window.showInformationMessage(`Successfully merged '${branchName}' into '${currentBranch}'`);
+                        }
+                    } catch (error) {
+                        vscode.window.showErrorMessage(`Failed to merge branch: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                }
+            },
+            {
+                id: 'jbGit.rebaseBranch',
+                handler: async (branchName: string) => {
+                    try {
+                        const currentBranch = await this.gitService.getCurrentBranch();
+                        if (currentBranch === branchName) {
+                            vscode.window.showWarningMessage('Cannot rebase a branch onto itself');
+                            return;
+                        }
+
+                        const confirmation = await vscode.window.showWarningMessage(
+                            `Rebase '${currentBranch}' onto '${branchName}'?`,
+                            { modal: true },
+                            'Rebase'
+                        );
+
+                        if (confirmation === 'Rebase') {
+                            await this.gitService.rebase(branchName);
+                            await this.statusBarService.notifyGitOperation('Rebase Branch');
+                            vscode.window.showInformationMessage(`Successfully rebased '${currentBranch}' onto '${branchName}'`);
+                        }
+                    } catch (error) {
+                        vscode.window.showErrorMessage(`Failed to rebase branch: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                }
+            },
+            {
+                id: 'jbGit.cherryPickBranch',
+                handler: async (branchName: string) => {
+                    try {
+                        // For cherry-pick, we need to get the latest commit from the branch
+                        const branches = await this.gitService.getBranches();
+                        const targetBranch = branches.find(b => b.name === branchName);
+                        
+                        if (!targetBranch?.lastCommit) {
+                            vscode.window.showErrorMessage('Cannot find commit information for cherry-pick');
+                            return;
+                        }
+
+                        const confirmation = await vscode.window.showWarningMessage(
+                            `Cherry-pick latest commit from '${branchName}'?`,
+                            { modal: true },
+                            'Cherry-pick'
+                        );
+
+                        if (confirmation === 'Cherry-pick') {
+                            await this.gitService.cherryPick(targetBranch.lastCommit.hash);
+                            await this.statusBarService.notifyGitOperation('Cherry-pick');
+                            vscode.window.showInformationMessage(`Successfully cherry-picked from '${branchName}'`);
+                        }
+                    } catch (error) {
+                        vscode.window.showErrorMessage(`Failed to cherry-pick: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                }
+            },
+            {
+                id: 'jbGit.deleteBranch',
+                handler: async (branchName: string) => {
+                    try {
+                        const currentBranch = await this.gitService.getCurrentBranch();
+                        if (currentBranch === branchName) {
+                            vscode.window.showWarningMessage('Cannot delete the currently active branch');
+                            return;
+                        }
+
+                        const confirmation = await vscode.window.showWarningMessage(
+                            `Delete branch '${branchName}'? This action cannot be undone.`,
+                            { modal: true },
+                            'Delete'
+                        );
+
+                        if (confirmation === 'Delete') {
+                            await this.gitService.deleteBranch(branchName);
+                            await this.statusBarService.notifyGitOperation('Delete Branch');
+                            vscode.window.showInformationMessage(`Successfully deleted branch '${branchName}'`);
+                        }
+                    } catch (error) {
+                        vscode.window.showErrorMessage(`Failed to delete branch: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                }
+            },
+            {
+                id: 'jbGit.createBranchFrom',
+                handler: async (sourceBranchName: string) => {
+                    try {
+                        const newBranchName = await this.dialogService.promptForBranchName(
+                            `Create new branch from '${sourceBranchName}'`,
+                            'Enter new branch name'
+                        );
+
+                        if (newBranchName) {
+                            await this.gitService.createBranch(newBranchName.trim(), sourceBranchName);
+                            
+                            // Ask if user wants to checkout the new branch
+                            const checkout = await vscode.window.showInformationMessage(
+                                `Successfully created branch '${newBranchName}' from '${sourceBranchName}'`,
+                                'Checkout New Branch'
+                            );
+
+                            if (checkout === 'Checkout New Branch') {
+                                await this.gitService.checkoutBranch(newBranchName.trim());
+                                await this.statusBarService.notifyGitOperation('Checkout Branch');
+                            }
+                        }
+                    } catch (error) {
+                        vscode.window.showErrorMessage(`Failed to create branch: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                }
             }
         ];
 
@@ -436,6 +605,64 @@ export class CommandRegistrationService {
                         await this.diffViewer.showDiff(diff, `${targetFilePath} (${selectedBranch.name} ↔ Working Tree)`);
                     } catch (error) {
                         vscode.window.showErrorMessage(`Failed to compare with branch: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                }
+            }
+        ];
+
+        commands.forEach(({ id, handler }) => {
+            const disposable = vscode.commands.registerCommand(id, handler);
+            this.disposables.push(disposable);
+            context.subscriptions.push(disposable);
+        });
+    }
+
+    /**
+     * Register SCM view commands
+     */
+    private registerSCMCommands(context: vscode.ExtensionContext): void {
+        const commands = [
+            {
+                id: 'jbGit.refreshSCM',
+                handler: async () => {
+                    try {
+                        if (this.scmTreeProvider) {
+                            this.scmTreeProvider.refresh();
+                            vscode.window.showInformationMessage('SCM view refreshed');
+                        }
+                    } catch (error) {
+                        vscode.window.showErrorMessage(`Failed to refresh SCM view: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                }
+            },
+            {
+                id: 'jbGit.switchRepository',
+                handler: async () => {
+                    try {
+                        // This would open a repository picker
+                        // For now, just show a message
+                        vscode.window.showInformationMessage('Repository switching not yet implemented');
+                    } catch (error) {
+                        vscode.window.showErrorMessage(`Failed to switch repository: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                }
+            },
+            {
+                id: 'jbGit.createChangelist',
+                handler: async () => {
+                    try {
+                        const name = await vscode.window.showInputBox({
+                            prompt: 'Enter changelist name',
+                            placeHolder: 'Changelist name'
+                        });
+                        
+                        if (name) {
+                            // This would create a changelist
+                            // For now, just show a message
+                            vscode.window.showInformationMessage(`Changelist "${name}" created (placeholder)`);
+                        }
+                    } catch (error) {
+                        vscode.window.showErrorMessage(`Failed to create changelist: ${error instanceof Error ? error.message : 'Unknown error'}`);
                     }
                 }
             }

@@ -152,3 +152,26 @@ export const mockGitExtension = {
     getAPI: jest.fn(() => mockGitAPI),
   },
 };
+
+// Mock TreeItem
+export class TreeItem {
+  public label: string;
+  public collapsibleState: TreeItemCollapsibleState;
+  public contextValue?: string;
+  public tooltip?: string;
+  public iconPath?: any;
+  public description?: string;
+
+  constructor(label: string, collapsibleState?: TreeItemCollapsibleState) {
+    this.label = label;
+    this.collapsibleState = collapsibleState || TreeItemCollapsibleState.None;
+  }
+}
+
+// Mock TreeItemCollapsibleState
+export enum TreeItemCollapsibleState {
+  None = 0,
+  Collapsed = 1,
+  Expanded = 2
+}
+

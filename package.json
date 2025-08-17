@@ -4,90 +4,106 @@
   "description": "JetBrains IDE-style Git functionality for VS Code",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.74.0"
+    "vscode": "^1.60.0"
   },
   "categories": [
     "SCM Providers"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "workspaceContains:.git"
   ],
   "main": "./out/extension.js",
   "extensionDependencies": [
     "vscode.git"
   ],
   "contributes": {
+    "views": {
+      "scm": [
+        {
+          "id": "jbGit.explorer",
+          "name": "Git (JetBrains)",
+          "when": "config.jbGit.scmView.enabled && gitOpenRepositoryCount != 0"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "jbGit.openMenu",
-        "title": "JetGit: Open Git Menu",
+        "title": "Open Git Menu",
         "category": "JetGit",
-        "icon": "$(source-control)"
+        "icon": "$(git-branch)"
       },
       {
-        "command": "jetgit.updateProject",
-        "title": "JetGit: Update Project",
+        "command": "jbGit.updateProject",
+        "title": "Update Project…",
         "category": "JetGit"
       },
       {
-        "command": "jetgit.commitChanges",
-        "title": "JetGit: Commit Changes",
+        "command": "jbGit.commit",
+        "title": "Commit…",
         "category": "JetGit"
       },
       {
-        "command": "jetgit.push",
-        "title": "JetGit: Push",
+        "command": "jbGit.push",
+        "title": "Push…",
         "category": "JetGit"
       },
       {
-        "command": "jetgit.fetch",
-        "title": "JetGit: Fetch",
+        "command": "jbGit.createBranch",
+        "title": "New Branch…",
         "category": "JetGit"
       },
       {
-        "command": "jetgit.newBranch",
-        "title": "JetGit: New Branch",
+        "command": "jbGit.checkoutRef",
+        "title": "Checkout Tag or Revision…",
         "category": "JetGit"
       },
       {
-        "command": "jetgit.checkoutRevision",
-        "title": "JetGit: Checkout Revision",
+        "command": "jbGit.checkoutBranch",
+        "title": "Checkout Branch",
         "category": "JetGit"
       },
       {
-        "command": "jetgit.newBranchFrom",
-        "title": "JetGit: New Branch From",
+        "command": "jbGit.mergeBranch",
+        "title": "Merge Branch",
         "category": "JetGit"
       },
       {
-        "command": "jetgit.showDiffWithWorkingTree",
-        "title": "JetGit: Show Diff with Working Tree",
+        "command": "jbGit.rebaseBranch",
+        "title": "Rebase Branch",
         "category": "JetGit"
       },
       {
-        "command": "jetgit.updateBranch",
-        "title": "JetGit: Update Branch",
+        "command": "jbGit.cherryPickBranch",
+        "title": "Cherry-pick Branch",
         "category": "JetGit"
       },
       {
-        "command": "jetgit.pushBranch",
-        "title": "JetGit: Push Branch",
+        "command": "jbGit.deleteBranch",
+        "title": "Delete Branch",
         "category": "JetGit"
       },
       {
-        "command": "jetgit.renameBranch",
-        "title": "JetGit: Rename Branch",
+        "command": "jbGit.createBranchFrom",
+        "title": "Create Branch From",
         "category": "JetGit"
       },
       {
-        "command": "jetgit.showFileDiff",
-        "title": "JetGit: Show File Diff",
-        "category": "JetGit"
+        "command": "jbGit.refreshSCM",
+        "title": "Refresh",
+        "icon": "$(refresh)"
       },
       {
-        "command": "jetgit.compareWithBranch",
-        "title": "JetGit: Compare with Branch",
-        "category": "JetGit"
+        "command": "jbGit.switchRepository",
+        "title": "Switch Repository",
+        "icon": "$(repo)"
+      },
+      {
+        "command": "jbGit.createChangelist",
+        "title": "Create Changelist",
+        "category": "JetGit",
+        "icon": "$(add)"
       },
       {
         "command": "jetgit.context.pull",
@@ -160,16 +176,6 @@
       {
         "command": "jetgit.context.manageRemotes",
         "title": "Manage Remotes"
-      },
-      {
-        "command": "jetgit.refreshStatus",
-        "title": "JetGit: Refresh Git Status",
-        "category": "JetGit"
-      },
-      {
-        "command": "jetgit.showExtensionInfo",
-        "title": "JetGit: Show Extension Information",
-        "category": "JetGit"
       }
     ],
     "submenus": [
@@ -186,42 +192,52 @@
           "when": "gitOpenRepositoryCount != 0"
         },
         {
-          "command": "jetgit.updateProject",
+          "command": "jbGit.updateProject",
           "when": "gitOpenRepositoryCount != 0"
         },
         {
-          "command": "jetgit.commitChanges",
+          "command": "jbGit.commit",
           "when": "gitOpenRepositoryCount != 0"
         },
         {
-          "command": "jetgit.push",
+          "command": "jbGit.push",
           "when": "gitOpenRepositoryCount != 0"
         },
         {
-          "command": "jetgit.fetch",
+          "command": "jbGit.createBranch",
           "when": "gitOpenRepositoryCount != 0"
         },
         {
-          "command": "jetgit.newBranch",
+          "command": "jbGit.checkoutRef",
           "when": "gitOpenRepositoryCount != 0"
         },
         {
-          "command": "jetgit.checkoutRevision",
+          "command": "jbGit.checkoutBranch",
           "when": "gitOpenRepositoryCount != 0"
         },
         {
-          "command": "jetgit.refreshStatus",
+          "command": "jbGit.mergeBranch",
           "when": "gitOpenRepositoryCount != 0"
         },
         {
-          "command": "jetgit.showExtensionInfo"
-        }
-      ],
-      "editor/title": [
+          "command": "jbGit.rebaseBranch",
+          "when": "gitOpenRepositoryCount != 0"
+        },
         {
-          "command": "jbGit.openMenu",
-          "when": "gitOpenRepositoryCount != 0",
-          "group": "navigation"
+          "command": "jbGit.cherryPickBranch",
+          "when": "gitOpenRepositoryCount != 0"
+        },
+        {
+          "command": "jbGit.deleteBranch",
+          "when": "gitOpenRepositoryCount != 0"
+        },
+        {
+          "command": "jbGit.createBranchFrom",
+          "when": "gitOpenRepositoryCount != 0"
+        },
+        {
+          "command": "jbGit.createChangelist",
+          "when": "gitOpenRepositoryCount != 0 && config.jbGit.showChangelists"
         }
       ],
       "explorer/context": [
@@ -311,6 +327,60 @@
           "command": "jetgit.context.manageRemotes",
           "group": "4_advanced@4"
         }
+      ],
+      "view/title": [
+        {
+          "command": "jbGit.switchRepository",
+          "when": "view == jbGit.explorer && gitOpenRepositoryCount > 1",
+          "group": "navigation@1"
+        },
+        {
+          "command": "jbGit.refreshSCM",
+          "when": "view == jbGit.explorer",
+          "group": "navigation@2"
+        },
+        {
+          "command": "jbGit.createBranch",
+          "when": "view == jbGit.explorer",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "jbGit.createChangelist",
+          "when": "view == jbGit.explorer && config.jbGit.showChangelists",
+          "group": "1_actions@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "jbGit.checkoutBranch",
+          "when": "view == jbGit.explorer && viewItem == branch",
+          "group": "1_branch@1"
+        },
+        {
+          "command": "jbGit.mergeBranch",
+          "when": "view == jbGit.explorer && viewItem == branch",
+          "group": "1_branch@2"
+        },
+        {
+          "command": "jbGit.rebaseBranch",
+          "when": "view == jbGit.explorer && viewItem == branch",
+          "group": "1_branch@3"
+        },
+        {
+          "command": "jbGit.cherryPickBranch",
+          "when": "view == jbGit.explorer && viewItem == branch",
+          "group": "1_branch@4"
+        },
+        {
+          "command": "jbGit.createBranchFrom",
+          "when": "view == jbGit.explorer && viewItem == branch",
+          "group": "2_create@1"
+        },
+        {
+          "command": "jbGit.deleteBranch",
+          "when": "view == jbGit.explorer && viewItem == branch",
+          "group": "3_modify@1"
+        }
       ]
     },
     "keybindings": [
@@ -321,56 +391,64 @@
         "when": "gitOpenRepositoryCount != 0"
       },
       {
-        "command": "jetgit.updateProject",
+        "command": "jbGit.updateProject",
         "key": "ctrl+shift+g u",
         "mac": "cmd+shift+g u",
         "when": "gitOpenRepositoryCount != 0"
       },
       {
-        "command": "jetgit.commitChanges",
+        "command": "jbGit.commit",
         "key": "ctrl+shift+g c",
         "mac": "cmd+shift+g c",
         "when": "gitOpenRepositoryCount != 0"
       },
       {
-        "command": "jetgit.push",
+        "command": "jbGit.push",
         "key": "ctrl+shift+g p",
         "mac": "cmd+shift+g p",
         "when": "gitOpenRepositoryCount != 0"
       },
       {
-        "command": "jetgit.fetch",
-        "key": "ctrl+shift+g f",
-        "mac": "cmd+shift+g f",
-        "when": "gitOpenRepositoryCount != 0"
-      },
-      {
-        "command": "jetgit.newBranch",
+        "command": "jbGit.createBranch",
         "key": "ctrl+shift+g b",
         "mac": "cmd+shift+g b",
         "when": "gitOpenRepositoryCount != 0"
-      },
-      {
-        "command": "jetgit.compareWithBranch",
-        "key": "ctrl+shift+g d",
-        "mac": "cmd+shift+g d",
-        "when": "editorTextFocus && gitOpenRepositoryCount != 0"
       }
-    ]
-  },
-  "configuration": {
-    "title": "JetGit",
-    "properties": {
-      "jbGit.statusBar.enabled": {
-        "type": "boolean",
-        "default": true,
-        "description": "Enable the JetGit status bar item"
+    ],
+    "configuration": {
+      "title": "JetGit",
+      "properties": {
+        "jbGit.statusBar.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the JetGit status bar item"
+        },
+        "jbGit.scmView.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the JetGit SCM view"
+        },
+        "jbGit.updateProject.mode": {
+          "type": "string",
+          "enum": [
+            "pull",
+            "pullRebase",
+            "fetchRebaseInteractive"
+          ],
+          "default": "pullRebase",
+          "description": "Mode for Update Project operation"
+        },
+        "jbGit.showChangelists": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show changelists in SCM view and menus"
+        }
       }
     }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
+    "compile": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
     "watch": "npm run compile -- --watch",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",

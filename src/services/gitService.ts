@@ -44,6 +44,8 @@ export interface IGitService {
     stashChanges(message?: string): Promise<void>;
     unstashChanges(stashIndex?: number): Promise<void>;
     createTag(name: string, message?: string): Promise<void>;
+    deleteBranch(branchName: string, force?: boolean): Promise<void>;
+    cherryPick(commitHash: string): Promise<void>;
 
     // Remote operations
     getRemotes(): Promise<Remote[]>;
@@ -1414,6 +1416,101 @@ export class GitService implements IGitService {
         } catch (error) {
             console.error('Failed to get stashes:', error);
             return [];
+        }
+    }
+
+    /**
+     * Delete a local branch
+     */
+    async deleteBranch(branchName: string, force: boolean = false): Promise<void> {
+        try {
+            const repository = await this.getRepository();
+            
+            // Validate branch name
+            const validation = validateBranchName(branchName);
+            if (!validation.isValid) {
+                throw new GitError(
+                    validation.error || 'Invalid branch name',
+                    'INVALID_BRANCH_NAME',
+                    'git'
+                );
+            }
+
+            // Check if branch exists and is local
+            const branches = await this.getBranches();
+            const targetBranch = branches.find(branch => 
+                branch.name === branchName && branch.type === 'local'
+            );
+
+            if (!targetBranch) {
+                throw new GitError(
+                    `Local branch '${branchName}' not found`,
+                    'BRANCH_NOT_FOUND',
+                    'git'
+                );
+            }
+
+            // Check if trying to delete current branch
+            const currentBranch = await this.getCurrentBranch();
+            if (currentBranch === branchName) {
+                throw new GitError(
+                    'Cannot delete the currently active branch',
+                    'DELETE_ACTIVE_BRANCH',
+                    'git'
+                );
+            }
+
+            // Delete the branch
+            await repository.deleteBranch(branchName, force);
+            
+        } catch (error) {
+            const gitError = error instanceof GitError ? error : new GitError(
+                `Failed to delete branch '${branchName}': ${error instanceof Error ? error.message : 'Unknown error'}`,
+                'DELETE_BRANCH_FAILED',
+                'git'
+            );
+            await this.errorHandler.handleError(gitError);
+            throw gitError;
+        }
+    }
+
+    /**
+     * Cherry-pick a commit
+     */
+    async cherryPick(commitHash: string): Promise<void> {
+        try {
+            const repository = await this.getRepository();
+            
+            if (!commitHash || commitHash.trim().length === 0) {
+                throw new GitError(
+                    'Commit hash cannot be empty',
+                    'EMPTY_COMMIT_HASH',
+                    'git'
+                );
+            }
+
+            // Check for uncommitted changes
+            const status = await this.getRepositoryStatus();
+            if (status.hasChanges) {
+                const choice = await this.dialogService.showUncommittedChangesWarning('cherry-pick');
+                
+                if (choice !== 'continue') {
+                    this.feedbackService.logInfo('Cherry-pick operation cancelled due to uncommitted changes');
+                    return;
+                }
+            }
+
+            // Perform cherry-pick
+            await repository.cherryPick(commitHash.trim());
+            
+        } catch (error) {
+            const gitError = error instanceof GitError ? error : new GitError(
+                `Failed to cherry-pick commit '${commitHash}': ${error instanceof Error ? error.message : 'Unknown error'}`,
+                'CHERRY_PICK_FAILED',
+                'git'
+            );
+            await this.errorHandler.handleError(gitError);
+            throw gitError;
         }
     }
 

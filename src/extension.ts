@@ -2,12 +2,15 @@ import * as vscode from 'vscode';
 import { GitService } from './services/gitService';
 import { MenuController } from './providers/gitMenuController';
 import { ContextMenuProvider } from './providers/contextMenuProvider';
+import { SCMTreeProvider } from './providers/scmTreeProvider';
+import { BranchesProvider } from './providers/branchesProvider';
 import { DiffViewer } from './views/diffViewer';
 import { DialogService } from './services/dialogService';
 import { StatusBarService } from './services/statusBarService';
 import { CommandRegistrationService } from './services/commandRegistrationService';
 import { FeedbackService } from './services/feedbackService';
 import { RepoContextService } from './services/repoContextService';
+import { SettingsService } from './services/settingsService';
 
 /**
  * JetGit Extension - JetBrains IDE-style Git functionality for VS Code
@@ -28,6 +31,12 @@ let menuController: MenuController;
 /** Provider for context menu Git operations */
 let contextMenuProvider: ContextMenuProvider;
 
+/** Provider for SCM tree view */
+let scmTreeProvider: SCMTreeProvider;
+
+/** Provider for branches data with caching and MRU */
+let branchesProvider: BranchesProvider;
+
 /** Custom diff viewer with conflict resolution */
 let diffViewer: DiffViewer;
 
@@ -45,6 +54,9 @@ let feedbackService: FeedbackService;
 
 /** Service for repository context management and MRU tracking */
 let repoContextService: RepoContextService;
+
+/** Service for managing extension settings and feature flags */
+let settingsService: SettingsService;
 
 /**
  * Activates the JetGit extension
@@ -64,17 +76,23 @@ let repoContextService: RepoContextService;
  */
 export function activate(context: vscode.ExtensionContext) {
     console.log('JetGit Extension is now active');
+    vscode.window.showInformationMessage('JetGit Extension is activating...');
 
     try {
         // Initialize core services
         feedbackService = new FeedbackService();
+        settingsService = SettingsService.getInstance();
         repoContextService = RepoContextService.getInstance(context);
         gitService = new GitService(feedbackService);
         dialogService = new DialogService();
 
+        // Initialize data providers
+        branchesProvider = new BranchesProvider(gitService, repoContextService);
+
         // Initialize UI components
-        menuController = new MenuController(gitService, repoContextService);
+        menuController = new MenuController(gitService, repoContextService, branchesProvider);
         contextMenuProvider = new ContextMenuProvider(gitService);
+        scmTreeProvider = new SCMTreeProvider(gitService, repoContextService, branchesProvider);
         diffViewer = new DiffViewer(context);
 
         // Initialize VS Code integration services
@@ -87,8 +105,15 @@ export function activate(context: vscode.ExtensionContext) {
             contextMenuProvider,
             diffViewer,
             dialogService,
-            statusBarService
+            statusBarService,
+            scmTreeProvider
         );
+
+        // Register SCM tree view (visibility controlled by context key)
+        const scmTreeView = vscode.window.createTreeView('jbGit.explorer', {
+            treeDataProvider: scmTreeProvider,
+            showCollapseAll: true
+        });
 
         // Register all commands through the command registration service
         commandRegistrationService.registerAllCommands(context);
@@ -96,12 +121,17 @@ export function activate(context: vscode.ExtensionContext) {
         // Add services to context subscriptions for proper cleanup
         context.subscriptions.push(
             feedbackService,
+            settingsService,
             repoContextService,
+            branchesProvider,
+            scmTreeProvider,
+            scmTreeView,
             statusBarService,
             commandRegistrationService
         );
 
         console.log('JetGit Extension activated successfully');
+        vscode.window.showInformationMessage('JetGit Extension activated successfully!');
     } catch (error) {
         console.error('Failed to activate JetGit Extension:', error);
         vscode.window.showErrorMessage(`JetGit Extension failed to activate: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -140,6 +170,10 @@ export function deactivate() {
             feedbackService.dispose();
         }
         
+        if (settingsService) {
+            settingsService.dispose();
+        }
+        
         if (statusBarService) {
             statusBarService.dispose();
         }
@@ -152,6 +186,14 @@ export function deactivate() {
             repoContextService.dispose();
         }
         
+        if (branchesProvider) {
+            branchesProvider.dispose();
+        }
+        
+        if (scmTreeProvider) {
+            scmTreeProvider.dispose();
+        }
+        
         if (diffViewer) {
             diffViewer.dispose();
         }
@@ -160,8 +202,11 @@ export function deactivate() {
         gitService = undefined as any;
         menuController = undefined as any;
         contextMenuProvider = undefined as any;
+        scmTreeProvider = undefined as any;
+        branchesProvider = undefined as any;
         diffViewer = undefined as any;
         dialogService = undefined as any;
+        settingsService = undefined as any;
         repoContextService = undefined as any;
         statusBarService = undefined as any;
         commandRegistrationService = undefined as any;

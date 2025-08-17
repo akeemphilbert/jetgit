@@ -70,44 +70,44 @@ export class GitMenuProvider {
             },
             {
                 id: 'update-project',
-                label: 'Update Project',
+                label: 'Update Project…',
                 description: 'Pull latest changes',
                 icon: new vscode.ThemeIcon('sync'),
                 command: 'jetgit.updateProject'
             },
             {
                 id: 'commit-changes',
-                label: 'Commit Changes',
+                label: 'Commit…',
                 description: 'Commit staged changes',
                 icon: new vscode.ThemeIcon('git-commit'),
                 command: 'jetgit.commitChanges'
             },
             {
                 id: 'push',
-                label: 'Push',
+                label: 'Push…',
                 description: 'Push to remote',
-                icon: new vscode.ThemeIcon('repo-push'),
+                icon: new vscode.ThemeIcon('arrow-up'),
                 command: 'jetgit.push'
             },
             {
                 id: 'fetch',
                 label: 'Fetch',
                 description: 'Fetch from remote',
-                icon: new vscode.ThemeIcon('repo-pull'),
+                icon: new vscode.ThemeIcon('arrow-down'),
                 command: 'jetgit.fetch'
             },
             {
                 id: 'new-branch',
-                label: 'New Branch',
+                label: 'New Branch…',
                 description: 'Create new branch',
                 icon: new vscode.ThemeIcon('git-branch'),
                 command: 'jetgit.newBranch'
             },
             {
                 id: 'checkout-revision',
-                label: 'Checkout Revision',
+                label: 'Checkout Tag or Revision…',
                 description: 'Checkout specific commit/tag',
-                icon: new vscode.ThemeIcon('git-commit'),
+                icon: new vscode.ThemeIcon('tag'),
                 command: 'jetgit.checkoutRevision'
             }
         ];
@@ -204,14 +204,14 @@ export class GitMenuProvider {
     private createBranchMenuItem(branch: Branch, isGrouped: boolean = false): GitMenuItem {
         const displayName = getBranchDisplayName(branch, isGrouped);
         const icon = branch.isActive ? 
-            new vscode.ThemeIcon('circle-filled') : 
+            new vscode.ThemeIcon('star-full') : 
             new vscode.ThemeIcon('git-branch');
 
         // Create branch operations submenu
         const branchOperations: GitMenuItem[] = [
             {
                 id: `new-branch-from-${branch.name}`,
-                label: 'New Branch From',
+                label: 'New Branch from Here…',
                 description: `Create new branch from ${branch.name}`,
                 icon: new vscode.ThemeIcon('git-branch'),
                 command: 'jetgit.newBranchFrom',
@@ -242,9 +242,9 @@ export class GitMenuProvider {
 
             branchOperations.push({
                 id: `push-${branch.name}`,
-                label: 'Push',
+                label: 'Push…',
                 description: `Push ${branch.name} to remote`,
-                icon: new vscode.ThemeIcon('repo-push'),
+                icon: new vscode.ThemeIcon('arrow-up'),
                 command: 'jetgit.pushBranch',
                 args: [branch.name]
             });
@@ -252,7 +252,7 @@ export class GitMenuProvider {
             if (!branch.isActive) {
                 branchOperations.push({
                     id: `rename-${branch.name}`,
-                    label: 'Rename',
+                    label: 'Rename…',
                     description: `Rename ${branch.name}`,
                     icon: new vscode.ThemeIcon('edit'),
                     command: 'jetgit.renameBranch',
@@ -283,11 +283,11 @@ export class GitMenuProvider {
         }
 
         if (branch.ahead && branch.ahead > 0) {
-            parts.push(`↑${branch.ahead}`);
+            parts.push(`$(arrow-up)${branch.ahead}`);
         }
 
         if (branch.behind && branch.behind > 0) {
-            parts.push(`↓${branch.behind}`);
+            parts.push(`$(arrow-down)${branch.behind}`);
         }
 
         if (branch.upstream && branch.type === 'local') {

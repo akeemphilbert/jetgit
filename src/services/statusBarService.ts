@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { GitService } from './gitService';
+import { SettingsService } from './settingsService';
 
 /**
  * Service responsible for managing the single status bar entry with JetBrains-style functionality
@@ -8,6 +9,7 @@ import { GitService } from './gitService';
 export class StatusBarService {
     private static instance: StatusBarService | undefined;
     private gitService: GitService;
+    private settingsService: SettingsService;
     private statusBarItem: vscode.StatusBarItem;
     private disposables: vscode.Disposable[] = [];
     private repositories: any[] = [];
@@ -15,6 +17,7 @@ export class StatusBarService {
 
     private constructor(gitService: GitService) {
         this.gitService = gitService;
+        this.settingsService = SettingsService.getInstance();
         
         // Create single status bar item for JetGit
         this.statusBarItem = vscode.window.createStatusBarItem(
@@ -56,6 +59,9 @@ export class StatusBarService {
 
         // Listen for settings changes
         this.setupSettingsWatcher();
+        
+        // Update visibility based on current settings
+        this.updateVisibility();
     }
 
     /**
@@ -296,13 +302,12 @@ export class StatusBarService {
      */
     private setupSettingsWatcher(): void {
         try {
-            const settingsWatcher = vscode.workspace.onDidChangeConfiguration((event) => {
-                if (event.affectsConfiguration('jbGit.statusBar.enabled')) {
-                    this.updateVisibility();
-                }
+            // Listen for settings changes through SettingsService
+            const settingsListener = this.settingsService.onDidChangeSettings((settings) => {
+                this.updateVisibility();
             });
 
-            this.disposables.push(settingsWatcher);
+            this.disposables.push(settingsListener);
         } catch (error) {
             console.error('Failed to setup settings watcher:', error);
         }
@@ -334,8 +339,7 @@ export class StatusBarService {
      * Check if settings allow status bar to be shown
      */
     private isStatusBarEnabled(): boolean {
-        const config = vscode.workspace.getConfiguration('jbGit');
-        return config.get('statusBar.enabled', true);
+        return this.settingsService.isStatusBarEnabled();
     }
 
     /**

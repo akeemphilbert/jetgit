@@ -157,7 +157,7 @@
   - Ensure QuickPick opens within 150ms performance requirement
   - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8, 8.5, 8.6, 8.7_
 
-- [ ] 22. Implement branches data provider with caching and MRU
+- [x] 22. Implement branches data provider with caching and MRU
   - Create BranchesProvider with getRecent(), getLocal(), getRemotes(), getTags() methods
   - Add divergence badge calculation with ahead/behind indicators
   - Implement branch list caching with refresh on repository change events
@@ -165,7 +165,7 @@
   - Debounce QuickPick data assembly to 50-100ms for performance
   - _Requirements: 9.9, 9.10, 11.5_
 
-- [ ] 23. Wire QuickPick actions and commands
+- [x] 23. Wire QuickPick actions and commands
   - Implement Update Project command with configurable mode (pull/pullRebase/fetchRebaseInteractive)
   - Add Commit, Push, New Branch, Checkout Tag or Revision commands
   - Implement branch selection actions: checkout, merge, rebase, cherry-pick, rename, delete
@@ -173,7 +173,7 @@
   - Register all commands in Command Palette with proper when clauses
   - _Requirements: 9.2, 9.3, 12.3_
 
-- [ ] 24. Create SCM view with TreeDataProvider
+- [x] 24. Create SCM view with TreeDataProvider
   - Implement SCMTreeProvider for sections: Recent, Local, Remote, Tags, Changelists
   - Add view title actions: repo switcher, refresh, create branch, new changelist
   - Create context menu items that mirror QuickPick actions
@@ -188,7 +188,7 @@
   - Create context keys for conditional view title button visibility
   - _Requirements: 10.6, 12.1, 12.2, 12.3, 12.4, 12.5_
 
-- [ ] 26. Update package.json contributions for new architecture
+- [x] 26. Update package.json contributions for new architecture
   - Remove duplicate status bar contributions and ensure single StatusBarItem
   - Add SCM view contribution: "views": { "scm": [{ "id": "jbGit.explorer", "name": "Git (JetBrains)" }] }
   - Add new commands for jbGit.openMenu, jbGit.createBranch, jbGit.checkoutRef, etc.
@@ -196,7 +196,7 @@
   - Add extensionDependencies: ["vscode.git"] for Git API integration
   - _Requirements: 8.1, 10.1, 10.4, 10.5_
 
-- [ ] 27. Add comprehensive testing for new architecture
+- [x] 27. Add comprehensive testing for new architecture
   - Write unit tests for menu modeling (single vs multi-repo scenarios)
   - Add integration tests for multi-repo workspace handling and MRU persistence
   - Create performance tests for QuickPick open time and large repository handling
@@ -204,14 +204,14 @@
   - Test divergence banner display and repo switching functionality
   - _Requirements: 8.5, 8.6, 8.7, 9.5_
 
-- [ ] 28. Performance optimization and caching
+- [x] 28. Performance optimization and caching
   - Implement branch list caching with onDidChangeRepository event refresh
   - Add debounced QuickPick data assembly (50-100ms) for smooth user experience
   - Optimize repository detection and status checking for multi-repo workspaces
   - Add performance monitoring for 150ms QuickPick open time requirement
   - _Requirements: 8.5_
 
-- [ ] 29. Polish JetBrains-style UI and UX
+- [x] 29. Polish JetBrains-style UI and UX
   - Match wording/casing of menu items to JetBrains ("Update Project…", "Checkout Tag or Revision…")
   - Use appropriate VS Code icons: $(git-branch), $(repo), $(arrow-up), $(arrow-down), etc.
   - Implement proper keyboard navigation (Up/Down/Enter, Esc to close)

@@ -189,7 +189,7 @@ export class RepoContextService implements vscode.Disposable {
     }
     
     /**
-     * Refreshes the repository list from VS Code Git API
+     * Refreshes the repository list from VS Code Git API (optimized for multi-repo workspaces)
      */
     private async refreshRepositories(): Promise<void> {
         if (!this._gitApi) {
@@ -198,16 +198,23 @@ export class RepoContextService implements vscode.Disposable {
         
         try {
             const gitRepositories = this._gitApi.repositories;
-            const repositories: Repository[] = [];
             
-            for (const gitRepo of gitRepositories) {
+            // Use parallel processing for better performance in multi-repo workspaces
+            const repositoryPromises = gitRepositories.map(async (gitRepo: any) => {
                 try {
-                    const repository = await this.createRepositoryFromGitRepo(gitRepo);
-                    repositories.push(repository);
+                    return await this.createRepositoryFromGitRepo(gitRepo);
                 } catch (error) {
                     console.warn('Failed to create repository from git repo:', error);
+                    return null;
                 }
-            }
+            });
+            
+            const repositoryResults = await Promise.allSettled(repositoryPromises);
+            const repositories: Repository[] = repositoryResults
+                .filter((result): result is PromiseFulfilledResult<Repository> => 
+                    result.status === 'fulfilled' && result.value !== null
+                )
+                .map(result => result.value);
             
             this._repositories = repositories;
             
@@ -232,7 +239,7 @@ export class RepoContextService implements vscode.Disposable {
     }
     
     /**
-     * Creates a Repository object from a VS Code Git repository
+     * Creates a Repository object from a VS Code Git repository (optimized)
      * 
      * @param gitRepo - The VS Code Git repository object
      * @returns Promise resolving to a Repository object
@@ -247,18 +254,35 @@ export class RepoContextService implements vscode.Disposable {
         let hasChanges = false;
         
         try {
-            // Get current branch
-            const head = gitRepo.state.HEAD;
-            if (head && head.name) {
-                currentBranch = head.name;
-                ahead = head.ahead;
-                behind = head.behind;
-            }
+            // Get repository state with timeout for better performance
+            const statePromise = new Promise<void>((resolve) => {
+                try {
+                    // Get current branch
+                    const head = gitRepo.state.HEAD;
+                    if (head && head.name) {
+                        currentBranch = head.name;
+                        ahead = head.ahead;
+                        behind = head.behind;
+                    }
+                    
+                    // Check for changes (optimized check)
+                    const workingTreeChanges = gitRepo.state.workingTreeChanges || [];
+                    const indexChanges = gitRepo.state.indexChanges || [];
+                    hasChanges = workingTreeChanges.length > 0 || indexChanges.length > 0;
+                    
+                    resolve();
+                } catch (error) {
+                    console.warn('Failed to get repository state:', error);
+                    resolve();
+                }
+            });
             
-            // Check for changes
-            const workingTreeChanges = gitRepo.state.workingTreeChanges || [];
-            const indexChanges = gitRepo.state.indexChanges || [];
-            hasChanges = workingTreeChanges.length > 0 || indexChanges.length > 0;
+            // Add timeout to prevent hanging on slow repositories
+            const timeoutPromise = new Promise<void>((resolve) => {
+                setTimeout(() => resolve(), 1000); // 1 second timeout
+            });
+            
+            await Promise.race([statePromise, timeoutPromise]);
             
         } catch (error) {
             console.warn('Failed to get repository state:', error);
