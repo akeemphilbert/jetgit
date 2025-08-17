@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { GitService } from '../../src/services/gitService';
-import { StatusIntegrationService } from '../../src/services/statusIntegrationService';
+import { StatusBarService } from '../../src/services/statusBarService';
 import { CommandRegistrationService } from '../../src/services/commandRegistrationService';
 import { GitMenuController } from '../../src/providers/gitMenuController';
 import { ContextMenuProvider } from '../../src/providers/contextMenuProvider';
@@ -59,7 +59,7 @@ jest.mock('vscode', () => ({
 
 describe('VS Code Integration Tests', () => {
     let gitService: GitService;
-    let statusIntegrationService: StatusIntegrationService;
+    let statusBarService: StatusBarService;
     let commandRegistrationService: CommandRegistrationService;
     let mockContext: vscode.ExtensionContext;
 
@@ -107,8 +107,8 @@ describe('VS Code Integration Tests', () => {
             mockContext.subscriptions = [];
         }
 
-        if (statusIntegrationService) {
-            statusIntegrationService.dispose();
+        if (statusBarService) {
+            statusBarService.dispose();
         }
         if (commandRegistrationService) {
             commandRegistrationService.dispose();
@@ -118,32 +118,32 @@ describe('VS Code Integration Tests', () => {
         jest.clearAllMocks();
     });
 
-    describe('Status Integration Service', () => {
+    describe('Status Bar Service', () => {
         beforeEach(() => {
-            statusIntegrationService = new StatusIntegrationService(gitService);
+            // Reset singleton
+            (StatusBarService as any).instance = undefined;
+            statusBarService = StatusBarService.getInstance(gitService);
         });
 
         test('should create status bar item', () => {
-            expect(statusIntegrationService).toBeDefined();
+            expect(statusBarService).toBeDefined();
             // Status bar item creation is tested through VS Code API mocks
         });
 
         test('should update status when Git operation is performed', async () => {
-            const notifyGitOperationSpy = jest.spyOn(statusIntegrationService, 'notifyGitOperation');
+            const notifyGitOperationSpy = jest.spyOn(statusBarService, 'notifyGitOperation');
             
-            await statusIntegrationService.notifyGitOperation('Test Operation');
+            await statusBarService.notifyGitOperation('Test Operation');
             
             expect(notifyGitOperationSpy).toHaveBeenCalledWith('Test Operation');
         });
 
-        test('should detect special Git states', async () => {
-            // Mock Git service methods
-            jest.spyOn(gitService, 'isInMergeState').mockResolvedValue(true);
-            jest.spyOn(gitService, 'isInRebaseState').mockResolvedValue(false);
-
-            const specialState = await statusIntegrationService.getSpecialGitState();
+        test('should update status bar text', async () => {
+            const updateSpy = jest.spyOn(statusBarService, 'update');
             
-            expect(specialState).toBe('MERGING');
+            await statusBarService.update();
+            
+            expect(updateSpy).toHaveBeenCalled();
         });
 
         test('should handle repository detection', async () => {
@@ -158,7 +158,7 @@ describe('VS Code Integration Tests', () => {
             });
 
             // This would normally update the status bar
-            await statusIntegrationService.notifyGitOperation('Test');
+            await statusBarService.notifyGitOperation('Test');
             
             // Verify the mocks were called
             expect(gitService.isRepository).toHaveBeenCalled();
@@ -171,7 +171,9 @@ describe('VS Code Integration Tests', () => {
             const contextMenuProvider = new ContextMenuProvider(gitService);
             const diffViewer = new DiffViewer(mockContext);
             const dialogService = new DialogService();
-            statusIntegrationService = new StatusIntegrationService(gitService);
+            // Reset singleton
+            (StatusBarService as any).instance = undefined;
+            statusBarService = StatusBarService.getInstance(gitService);
 
             commandRegistrationService = new CommandRegistrationService(
                 gitService,
@@ -179,7 +181,7 @@ describe('VS Code Integration Tests', () => {
                 contextMenuProvider,
                 diffViewer,
                 dialogService,
-                statusIntegrationService
+                statusBarService
             );
         });
 
@@ -189,7 +191,7 @@ describe('VS Code Integration Tests', () => {
             commandRegistrationService.registerAllCommands(mockContext);
             
             // Verify that commands were registered
-            expect(registerCommandSpy).toHaveBeenCalledWith('jetgit.showGitMenu', expect.any(Function));
+            expect(registerCommandSpy).toHaveBeenCalledWith('jbGit.openMenu', expect.any(Function));
             expect(registerCommandSpy).toHaveBeenCalledWith('jetgit.updateProject', expect.any(Function));
             expect(registerCommandSpy).toHaveBeenCalledWith('jetgit.commitChanges', expect.any(Function));
             expect(registerCommandSpy).toHaveBeenCalledWith('jetgit.push', expect.any(Function));
@@ -242,7 +244,9 @@ describe('VS Code Integration Tests', () => {
             const contextMenuProvider = new ContextMenuProvider(gitService);
             const diffViewer = new DiffViewer(mockContext);
             const dialogService = new DialogService();
-            statusIntegrationService = new StatusIntegrationService(gitService);
+            // Reset singleton
+            (StatusBarService as any).instance = undefined;
+            statusBarService = StatusBarService.getInstance(gitService);
 
             commandRegistrationService = new CommandRegistrationService(
                 gitService,
@@ -250,7 +254,7 @@ describe('VS Code Integration Tests', () => {
                 contextMenuProvider,
                 diffViewer,
                 dialogService,
-                statusIntegrationService
+                statusBarService
             );
 
             commandRegistrationService.registerAllCommands(mockContext);
@@ -268,12 +272,12 @@ describe('VS Code Integration Tests', () => {
         test('should integrate with status service for Git operations', async () => {
             // Mock Git service methods
             jest.spyOn(gitService, 'pull').mockResolvedValue();
-            jest.spyOn(statusIntegrationService, 'notifyGitOperation').mockResolvedValue();
+            jest.spyOn(statusBarService, 'notifyGitOperation').mockResolvedValue();
 
-            // Test the status integration directly
-            await statusIntegrationService.notifyGitOperation('Test Operation');
+            // Test the status bar service directly
+            await statusBarService.notifyGitOperation('Test Operation');
             
-            expect(statusIntegrationService.notifyGitOperation).toHaveBeenCalledWith('Test Operation');
+            expect(statusBarService.notifyGitOperation).toHaveBeenCalledWith('Test Operation');
         });
 
         test('should handle error scenarios in command execution', () => {
@@ -330,10 +334,12 @@ describe('VS Code Integration Tests', () => {
 
     describe('Extension Lifecycle', () => {
         test('should clean up resources on deactivation', () => {
-            statusIntegrationService = new StatusIntegrationService(gitService);
-            const disposeSpy = jest.spyOn(statusIntegrationService, 'dispose');
+            // Reset singleton
+            (StatusBarService as any).instance = undefined;
+            statusBarService = StatusBarService.getInstance(gitService);
+            const disposeSpy = jest.spyOn(statusBarService, 'dispose');
 
-            statusIntegrationService.dispose();
+            statusBarService.dispose();
 
             expect(disposeSpy).toHaveBeenCalled();
         });

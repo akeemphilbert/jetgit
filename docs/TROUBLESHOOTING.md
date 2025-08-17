@@ -118,7 +118,7 @@ This guide helps you resolve common issues with the JetGit extension. If you can
 **Solutions**:
 1. **Check keybinding conflicts**:
    - `File` → `Preferences` → `Keyboard Shortcuts`
-   - Search for "jetgit.showGitMenu"
+   - Search for "jbGit.openMenu"
    - Resolve any conflicts
 
 2. **Reset keybindings**:

@@ -13,11 +13,14 @@
     "onStartupFinished"
   ],
   "main": "./out/extension.js",
+  "extensionDependencies": [
+    "vscode.git"
+  ],
   "contributes": {
     "commands": [
       {
-        "command": "jetgit.showGitMenu",
-        "title": "JetGit: Show Git Menu",
+        "command": "jbGit.openMenu",
+        "title": "JetGit: Open Git Menu",
         "category": "JetGit",
         "icon": "$(source-control)"
       },
@@ -179,7 +182,7 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "jetgit.showGitMenu",
+          "command": "jbGit.openMenu",
           "when": "gitOpenRepositoryCount != 0"
         },
         {
@@ -216,7 +219,7 @@
       ],
       "editor/title": [
         {
-          "command": "jetgit.showGitMenu",
+          "command": "jbGit.openMenu",
           "when": "gitOpenRepositoryCount != 0",
           "group": "navigation"
         }
@@ -312,7 +315,7 @@
     },
     "keybindings": [
       {
-        "command": "jetgit.showGitMenu",
+        "command": "jbGit.openMenu",
         "key": "ctrl+shift+g ctrl+shift+m",
         "mac": "cmd+shift+g cmd+shift+m",
         "when": "gitOpenRepositoryCount != 0"
@@ -354,6 +357,16 @@
         "when": "editorTextFocus && gitOpenRepositoryCount != 0"
       }
     ]
+  },
+  "configuration": {
+    "title": "JetGit",
+    "properties": {
+      "jbGit.statusBar.enabled": {
+        "type": "boolean",
+        "default": true,
+        "description": "Enable the JetGit status bar item"
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

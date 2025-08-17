@@ -1,37 +1,37 @@
 import * as vscode from 'vscode';
 import { GitService } from './gitService';
-import { GitMenuController } from '../providers/gitMenuController';
+import { MenuController } from '../providers/gitMenuController';
 import { ContextMenuProvider } from '../providers/contextMenuProvider';
 import { DiffViewer } from '../views/diffViewer';
 import { DialogService } from './dialogService';
-import { StatusIntegrationService } from './statusIntegrationService';
+import { StatusBarService } from './statusBarService';
 
 /**
  * Service responsible for registering all VS Code commands and managing their lifecycle
  */
 export class CommandRegistrationService {
     private gitService: GitService;
-    private gitMenuController: GitMenuController;
+    private menuController: MenuController;
     private contextMenuProvider: ContextMenuProvider;
     private diffViewer: DiffViewer;
     private dialogService: DialogService;
-    private statusIntegrationService: StatusIntegrationService;
+    private statusBarService: StatusBarService;
     private disposables: vscode.Disposable[] = [];
 
     constructor(
         gitService: GitService,
-        gitMenuController: GitMenuController,
+        menuController: MenuController,
         contextMenuProvider: ContextMenuProvider,
         diffViewer: DiffViewer,
         dialogService: DialogService,
-        statusIntegrationService: StatusIntegrationService
+        statusBarService: StatusBarService
     ) {
         this.gitService = gitService;
-        this.gitMenuController = gitMenuController;
+        this.menuController = menuController;
         this.contextMenuProvider = contextMenuProvider;
         this.diffViewer = diffViewer;
         this.dialogService = dialogService;
-        this.statusIntegrationService = statusIntegrationService;
+        this.statusBarService = statusBarService;
     }
 
     /**
@@ -60,10 +60,10 @@ export class CommandRegistrationService {
     private registerMainCommands(context: vscode.ExtensionContext): void {
         const commands = [
             {
-                id: 'jetgit.showGitMenu',
+                id: 'jbGit.openMenu',
                 handler: async () => {
                     try {
-                        await this.gitMenuController.showGitMenu();
+                        await this.menuController.open();
                     } catch (error) {
                         vscode.window.showErrorMessage(`Git operation failed: ${error}`);
                     }
@@ -74,7 +74,7 @@ export class CommandRegistrationService {
                 handler: async () => {
                     try {
                         await this.gitService.pull();
-                        await this.statusIntegrationService.notifyGitOperation('Update Project');
+                        await this.statusBarService.notifyGitOperation('Update Project');
                         vscode.window.showInformationMessage('Project updated successfully');
                     } catch (error) {
                         vscode.window.showErrorMessage(`Failed to update project: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -88,7 +88,7 @@ export class CommandRegistrationService {
                         const message = await this.dialogService.promptForCommitMessage();
                         if (message) {
                             await this.gitService.commit(message);
-                            await this.statusIntegrationService.notifyGitOperation('Commit Changes');
+                            await this.statusBarService.notifyGitOperation('Commit Changes');
                             vscode.window.showInformationMessage('Changes committed successfully');
                         }
                     } catch (error) {
@@ -101,7 +101,7 @@ export class CommandRegistrationService {
                 handler: async () => {
                     try {
                         await this.gitService.push();
-                        await this.statusIntegrationService.notifyGitOperation('Push');
+                        await this.statusBarService.notifyGitOperation('Push');
                         vscode.window.showInformationMessage('Changes pushed successfully');
                     } catch (error) {
                         vscode.window.showErrorMessage(`Failed to push changes: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -113,7 +113,7 @@ export class CommandRegistrationService {
                 handler: async () => {
                     try {
                         await this.gitService.fetch();
-                        await this.statusIntegrationService.notifyGitOperation('Fetch');
+                        await this.statusBarService.notifyGitOperation('Fetch');
                         vscode.window.showInformationMessage('Fetch completed successfully');
                     } catch (error) {
                         vscode.window.showErrorMessage(`Failed to fetch: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -130,7 +130,7 @@ export class CommandRegistrationService {
                         );
                         if (branchName) {
                             await this.gitService.createBranch(branchName.trim());
-                            await this.statusIntegrationService.notifyGitOperation('New Branch');
+                            await this.statusBarService.notifyGitOperation('New Branch');
                             vscode.window.showInformationMessage(`Successfully created branch '${branchName}'`);
                         }
                     } catch (error) {
@@ -148,11 +148,102 @@ export class CommandRegistrationService {
                         );
                         if (revision) {
                             await this.gitService.checkoutBranch(revision.trim());
-                            await this.statusIntegrationService.notifyGitOperation('Checkout Revision');
+                            await this.statusBarService.notifyGitOperation('Checkout Revision');
                             vscode.window.showInformationMessage(`Successfully checked out '${revision}'`);
                         }
                     } catch (error) {
                         vscode.window.showErrorMessage(`Failed to checkout revision: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                }
+            },
+            // New JetBrains-style commands
+            {
+                id: 'jbGit.updateProject',
+                handler: async (repository?: any) => {
+                    try {
+                        await this.gitService.pull();
+                        await this.statusBarService.notifyGitOperation('Update Project');
+                        vscode.window.showInformationMessage('Project updated successfully');
+                    } catch (error) {
+                        vscode.window.showErrorMessage(`Failed to update project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                }
+            },
+            {
+                id: 'jbGit.commit',
+                handler: async (repository?: any) => {
+                    try {
+                        const message = await this.dialogService.promptForCommitMessage();
+                        if (message) {
+                            await this.gitService.commit(message);
+                            await this.statusBarService.notifyGitOperation('Commit');
+                            vscode.window.showInformationMessage('Changes committed successfully');
+                        }
+                    } catch (error) {
+                        vscode.window.showErrorMessage(`Failed to commit changes: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                }
+            },
+            {
+                id: 'jbGit.push',
+                handler: async (repository?: any) => {
+                    try {
+                        await this.gitService.push();
+                        await this.statusBarService.notifyGitOperation('Push');
+                        vscode.window.showInformationMessage('Changes pushed successfully');
+                    } catch (error) {
+                        vscode.window.showErrorMessage(`Failed to push changes: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                }
+            },
+            {
+                id: 'jbGit.createBranch',
+                handler: async (repository?: any) => {
+                    try {
+                        const branchName = await this.dialogService.promptForBranchName(
+                            'Create new branch',
+                            'Enter new branch name'
+                        );
+                        if (branchName) {
+                            await this.gitService.createBranch(branchName.trim());
+                            await this.statusBarService.notifyGitOperation('Create Branch');
+                            vscode.window.showInformationMessage(`Successfully created branch '${branchName}'`);
+                        }
+                    } catch (error) {
+                        vscode.window.showErrorMessage(`Failed to create branch: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                }
+            },
+            {
+                id: 'jbGit.checkoutRef',
+                handler: async (ref?: string) => {
+                    try {
+                        let revision = ref;
+                        if (!revision) {
+                            revision = await this.dialogService.promptForRevision(
+                                'Checkout tag or revision',
+                                'Enter branch name, tag, or commit hash'
+                            );
+                        }
+                        if (revision) {
+                            await this.gitService.checkoutBranch(revision.trim());
+                            await this.statusBarService.notifyGitOperation('Checkout');
+                            vscode.window.showInformationMessage(`Successfully checked out '${revision}'`);
+                        }
+                    } catch (error) {
+                        vscode.window.showErrorMessage(`Failed to checkout: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                }
+            },
+            {
+                id: 'jbGit.checkoutBranch',
+                handler: async (branchName: string) => {
+                    try {
+                        await this.gitService.checkoutBranch(branchName);
+                        await this.statusBarService.notifyGitOperation('Checkout Branch');
+                        vscode.window.showInformationMessage(`Successfully checked out branch '${branchName}'`);
+                    } catch (error) {
+                        vscode.window.showErrorMessage(`Failed to checkout branch: ${error instanceof Error ? error.message : 'Unknown error'}`);
                     }
                 }
             }
@@ -181,7 +272,7 @@ export class CommandRegistrationService {
 
                         if (newBranchName) {
                             await this.gitService.createBranch(newBranchName.trim(), branchName);
-                            await this.statusIntegrationService.notifyGitOperation('New Branch From');
+                            await this.statusBarService.notifyGitOperation('New Branch From');
                             vscode.window.showInformationMessage(`Successfully created branch '${newBranchName}' from '${branchName}'`);
                         }
                     } catch (error) {
@@ -218,7 +309,7 @@ export class CommandRegistrationService {
                         }
 
                         await this.gitService.pull();
-                        await this.statusIntegrationService.notifyGitOperation('Update Branch');
+                        await this.statusBarService.notifyGitOperation('Update Branch');
                         vscode.window.showInformationMessage(`Successfully updated branch '${branchName}'`);
                     } catch (error) {
                         vscode.window.showErrorMessage(`Failed to update branch: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -235,7 +326,7 @@ export class CommandRegistrationService {
                         }
 
                         await this.gitService.push(branchName);
-                        await this.statusIntegrationService.notifyGitOperation('Push Branch');
+                        await this.statusBarService.notifyGitOperation('Push Branch');
                         vscode.window.showInformationMessage(`Successfully pushed branch '${branchName}'`);
                     } catch (error) {
                         vscode.window.showErrorMessage(`Failed to push branch: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -254,7 +345,7 @@ export class CommandRegistrationService {
 
                         if (newBranchName && newBranchName.trim() !== branchName) {
                             await this.gitService.renameBranch(branchName, newBranchName.trim());
-                            await this.statusIntegrationService.notifyGitOperation('Rename Branch');
+                            await this.statusBarService.notifyGitOperation('Rename Branch');
                             vscode.window.showInformationMessage(`Successfully renamed branch '${branchName}' to '${newBranchName}'`);
                         }
                     } catch (error) {
@@ -366,7 +457,7 @@ export class CommandRegistrationService {
                 id: 'jetgit.refreshStatus',
                 handler: async () => {
                     try {
-                        await this.statusIntegrationService.notifyGitOperation('Refresh Status');
+                        await this.statusBarService.notifyGitOperation('Refresh Status');
                         vscode.window.showInformationMessage('Git status refreshed');
                     } catch (error) {
                         vscode.window.showErrorMessage(`Failed to refresh status: ${error instanceof Error ? error.message : 'Unknown error'}`);

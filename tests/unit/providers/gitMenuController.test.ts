@@ -1,6 +1,7 @@
-import { GitMenuController } from '../../../src/providers/gitMenuController';
+import { MenuController } from '../../../src/providers/gitMenuController';
 import { GitService } from '../../../src/services/gitService';
-import { GitMenuProvider } from '../../../src/providers/gitMenuProvider';
+import { RepoContextService } from '../../../src/services/repoContextService';
+import { Repository, Branch } from '../../../src/types/git';
 
 // Mock VS Code module
 const mockQuickPick = {
@@ -25,198 +26,240 @@ jest.mock('vscode', () => ({
         createQuickPick: jest.fn(() => mockQuickPick),
         showErrorMessage: jest.fn(),
         showInformationMessage: jest.fn()
+    },
+    QuickPickItemKind: {
+        Separator: -1
+    },
+    commands: {
+        executeCommand: jest.fn()
+    },
+    Uri: {
+        parse: jest.fn()
     }
 }));
 
-// Mock GitService and GitMenuProvider
+// Mock services
 jest.mock('../../../src/services/gitService');
-jest.mock('../../../src/providers/gitMenuProvider');
+jest.mock('../../../src/services/repoContextService');
 
-describe('GitMenuController', () => {
-    let gitMenuController: GitMenuController;
+describe('MenuController', () => {
+    let menuController: MenuController;
     let mockGitService: jest.Mocked<GitService>;
-    let mockGitMenuProvider: jest.Mocked<GitMenuProvider>;
+    let mockRepoContextService: jest.Mocked<RepoContextService>;
 
     beforeEach(() => {
         mockGitService = new GitService() as jest.Mocked<GitService>;
-        gitMenuController = new GitMenuController(mockGitService);
+        mockRepoContextService = {
+            listRepositories: jest.fn(),
+            getActiveRepository: jest.fn(),
+            setActiveRepository: jest.fn(),
+            getMRUBranches: jest.fn(),
+            addToMRU: jest.fn()
+        } as any;
         
-        // Get the mocked GitMenuProvider instance
-        mockGitMenuProvider = (GitMenuProvider as jest.MockedClass<typeof GitMenuProvider>).mock.instances[0] as jest.Mocked<GitMenuProvider>;
+        menuController = new MenuController(mockGitService, mockRepoContextService);
     });
 
     afterEach(() => {
         jest.clearAllMocks();
     });
 
-    describe('showGitMenu', () => {
-        it('should create and show QuickPick with menu items', async () => {
-            const mockMenuItems = [
-                {
-                    id: 'update-project',
-                    label: 'Update Project',
-                    command: 'jetgit.updateProject'
-                },
-                {
-                    id: 'commit-changes',
-                    label: 'Commit Changes',
-                    description: '3 changes'
-                }
-            ];
+    describe('open', () => {
+        it('should show single-repo layout when one repository exists', async () => {
+            const mockRepository: Repository = {
+                rootUri: { fsPath: '/test/repo' } as any,
+                name: 'test-repo',
+                currentBranch: 'main',
+                hasChanges: false
+            };
 
-            mockGitMenuProvider.buildGitMenu.mockResolvedValue(mockMenuItems);
+            mockRepoContextService.listRepositories.mockReturnValue([mockRepository]);
+            mockRepoContextService.getMRUBranches.mockReturnValue([]);
+            mockGitService.getBranches.mockResolvedValue([]);
 
-            await gitMenuController.showGitMenu();
+            await menuController.open();
 
-            expect(mockGitMenuProvider.buildGitMenu).toHaveBeenCalled();
-            expect(mockQuickPick.title).toBe('Git Menu');
-            expect(mockQuickPick.placeholder).toBe('Select a Git operation');
-            expect(mockQuickPick.canSelectMany).toBe(false);
-            expect(mockQuickPick.matchOnDescription).toBe(true);
-            expect(mockQuickPick.matchOnDetail).toBe(true);
+            expect(mockQuickPick.title).toBe('Git (test-repo)');
+            expect(mockQuickPick.placeholder).toBe('Search for branches and actions');
             expect(mockQuickPick.show).toHaveBeenCalled();
         });
 
-        it('should handle errors when building menu', async () => {
-            const vscode = require('vscode');
-            mockGitMenuProvider.buildGitMenu.mockRejectedValue(new Error('Menu build failed'));
-
-            await gitMenuController.showGitMenu();
-
-            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith('Failed to show Git menu: Error: Menu build failed');
-        });
-    });
-
-    describe('convertToQuickPickItems', () => {
-        it('should convert menu items to QuickPick items correctly', async () => {
-            const mockMenuItems = [
+        it('should show multi-repo layout when multiple repositories exist', async () => {
+            const mockRepositories: Repository[] = [
                 {
-                    id: 'update-project',
-                    label: 'Update Project',
-                    description: 'Pull latest changes',
-                    icon: { id: 'sync' },
-                    command: 'jetgit.updateProject'
+                    rootUri: { fsPath: '/test/repo1' } as any,
+                    name: 'repo1',
+                    currentBranch: 'main',
+                    hasChanges: false
                 },
                 {
-                    id: 'separator-1',
-                    label: '─────────────────',
-                    contextValue: 'separator'
-                },
-                {
-                    id: 'branch-main',
-                    label: '● main',
-                    contextValue: 'branch',
-                    children: [
-                        {
-                            id: 'branch-main-checkout',
-                            label: 'Checkout',
-                            command: 'jetgit.checkout'
-                        }
-                    ]
+                    rootUri: { fsPath: '/test/repo2' } as any,
+                    name: 'repo2',
+                    currentBranch: 'develop',
+                    hasChanges: true
                 }
             ];
 
-            mockGitMenuProvider.buildGitMenu.mockResolvedValue(mockMenuItems);
+            mockRepoContextService.listRepositories.mockReturnValue(mockRepositories);
 
-            await gitMenuController.showGitMenu();
+            await menuController.open();
 
-            // Check that items were converted correctly (separators should be filtered out)
-            expect(mockQuickPick.items).toHaveLength(2); // separator should be filtered out
-            
+            expect(mockQuickPick.title).toBe('Git (2 repositories)');
+            expect(mockQuickPick.placeholder).toBe('Search for branches and actions');
+            expect(mockQuickPick.show).toHaveBeenCalled();
+        });
+
+        it('should show info message when no repositories exist', async () => {
+            const vscode = require('vscode');
+            mockRepoContextService.listRepositories.mockReturnValue([]);
+
+            await menuController.open();
+
+            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('No Git repositories found in workspace');
+            expect(mockQuickPick.show).not.toHaveBeenCalled();
+        });
+
+        it('should handle errors when opening menu', async () => {
+            const vscode = require('vscode');
+            mockRepoContextService.listRepositories.mockImplementation(() => {
+                throw new Error('Failed to list repositories');
+            });
+
+            await menuController.open();
+
+            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith('Failed to open Git menu: Error: Failed to list repositories');
+        });
+    });
+
+    describe('single-repo layout', () => {
+        it('should create top actions correctly', async () => {
+            const mockRepository: Repository = {
+                rootUri: { fsPath: '/test/repo' } as any,
+                name: 'test-repo',
+                currentBranch: 'main',
+                hasChanges: false
+            };
+
+            mockRepoContextService.listRepositories.mockReturnValue([mockRepository]);
+            mockRepoContextService.getMRUBranches.mockReturnValue([]);
+            mockGitService.getBranches.mockResolvedValue([]);
+
+            await menuController.open();
+
             const items = mockQuickPick.items;
-            expect(items[0].label).toBe('$(sync) Update Project');
-            expect(items[0].description).toBe('Pull latest changes');
             
-            expect(items[1].label).toBe('● main →'); // Should have arrow for children
+            // Check that top actions are present
+            expect(items.some((item: any) => item.label?.includes('Update Project'))).toBe(true);
+            expect(items.some((item: any) => item.label?.includes('Commit'))).toBe(true);
+            expect(items.some((item: any) => item.label?.includes('Push'))).toBe(true);
+            expect(items.some((item: any) => item.label?.includes('New Branch'))).toBe(true);
+            expect(items.some((item: any) => item.label?.includes('Checkout Tag or Revision'))).toBe(true);
+        });
+
+        it('should include recent branches when available', async () => {
+            const mockRepository: Repository = {
+                rootUri: { fsPath: '/test/repo' } as any,
+                name: 'test-repo',
+                currentBranch: 'main',
+                hasChanges: false
+            };
+
+            const mockBranches: Branch[] = [
+                {
+                    name: 'feature/auth',
+                    fullName: 'feature/auth',
+                    type: 'local',
+                    isActive: false
+                }
+            ];
+
+            mockRepoContextService.listRepositories.mockReturnValue([mockRepository]);
+            mockRepoContextService.getMRUBranches.mockReturnValue(['feature/auth']);
+            mockGitService.getBranches.mockResolvedValue(mockBranches);
+
+            await menuController.open();
+
+            const items = mockQuickPick.items;
+            expect(items.some((item: any) => item.label === 'Recent')).toBe(true);
+            expect(items.some((item: any) => item.label?.includes('feature/auth'))).toBe(true);
         });
     });
 
-    describe('formatLabel', () => {
-        it('should format label with icon correctly', async () => {
-            const controller = gitMenuController as any;
-            
-            const item = {
-                id: 'test',
-                label: 'Test Item',
-                icon: { id: 'sync' }
-            };
+    describe('multi-repo layout', () => {
+        it('should show divergence warning when repositories have diverged', async () => {
+            const mockRepositories: Repository[] = [
+                {
+                    rootUri: { fsPath: '/test/repo1' } as any,
+                    name: 'repo1',
+                    currentBranch: 'main',
+                    hasChanges: false,
+                    ahead: 2,
+                    behind: 0
+                },
+                {
+                    rootUri: { fsPath: '/test/repo2' } as any,
+                    name: 'repo2',
+                    currentBranch: 'develop',
+                    hasChanges: true,
+                    ahead: 0,
+                    behind: 1
+                }
+            ];
 
-            const formatted = controller.formatLabel(item);
-            expect(formatted).toBe('$(sync) Test Item');
+            mockRepoContextService.listRepositories.mockReturnValue(mockRepositories);
+
+            await menuController.open();
+
+            const items = mockQuickPick.items;
+            expect(items.some((item: any) => item.label?.includes('Branches have diverged'))).toBe(true);
         });
 
-        it('should format header labels correctly', async () => {
-            const controller = gitMenuController as any;
-            
-            const item = {
-                id: 'header',
-                label: 'Common Tasks',
-                contextValue: 'header'
-            };
+        it('should show repository grid with current branches', async () => {
+            const mockRepositories: Repository[] = [
+                {
+                    rootUri: { fsPath: '/test/repo1' } as any,
+                    name: 'repo1',
+                    currentBranch: 'main',
+                    hasChanges: false
+                },
+                {
+                    rootUri: { fsPath: '/test/repo2' } as any,
+                    name: 'repo2',
+                    currentBranch: 'develop',
+                    hasChanges: true
+                }
+            ];
 
-            const formatted = controller.formatLabel(item);
-            expect(formatted).toBe('── COMMON TASKS ──');
-        });
+            mockRepoContextService.listRepositories.mockReturnValue(mockRepositories);
 
-        it('should add arrow for items with children', async () => {
-            const controller = gitMenuController as any;
-            
-            const item = {
-                id: 'branch',
-                label: 'main',
-                children: [{ id: 'child', label: 'Child' }]
-            };
+            await menuController.open();
 
-            const formatted = controller.formatLabel(item);
-            expect(formatted).toBe('main →');
+            const items = mockQuickPick.items;
+            expect(items.some((item: any) => item.label?.includes('repo1') && item.label?.includes('main'))).toBe(true);
+            expect(items.some((item: any) => item.label?.includes('repo2') && item.label?.includes('develop'))).toBe(true);
         });
     });
 
-    describe('getItemDetail', () => {
-        it('should return correct detail for branch items', async () => {
-            const controller = gitMenuController as any;
-            
-            const item = {
-                id: 'branch',
-                label: 'main',
-                contextValue: 'branch',
-                children: [
-                    { id: 'op1', label: 'Operation 1' },
-                    { id: 'op2', label: 'Operation 2' }
-                ]
+    describe('performance', () => {
+        it('should open within reasonable time', async () => {
+            const mockRepository: Repository = {
+                rootUri: { fsPath: '/test/repo' } as any,
+                name: 'test-repo',
+                currentBranch: 'main',
+                hasChanges: false
             };
 
-            const detail = controller.getItemDetail(item);
-            expect(detail).toBe('2 operations available');
-        });
+            mockRepoContextService.listRepositories.mockReturnValue([mockRepository]);
+            mockRepoContextService.getMRUBranches.mockReturnValue([]);
+            mockGitService.getBranches.mockResolvedValue([]);
 
-        it('should return correct detail for branch group items', async () => {
-            const controller = gitMenuController as any;
-            
-            const item = {
-                id: 'group',
-                label: 'feature/',
-                contextValue: 'branch-group',
-                children: [
-                    { id: 'branch1', label: 'feature/auth' },
-                    { id: 'branch2', label: 'feature/ui' }
-                ]
-            };
+            const startTime = Date.now();
+            await menuController.open();
+            const elapsed = Date.now() - startTime;
 
-            const detail = controller.getItemDetail(item);
-            expect(detail).toBe('2 branches');
-        });
-
-        it('should return undefined for other items', async () => {
-            const controller = gitMenuController as any;
-            
-            const item = {
-                id: 'command',
-                label: 'Update Project'
-            };
-
-            const detail = controller.getItemDetail(item);
-            expect(detail).toBeUndefined();
+            // Should open quickly (within 1 second for tests)
+            expect(elapsed).toBeLessThan(1000);
+            expect(mockQuickPick.show).toHaveBeenCalled();
         });
     });
 });

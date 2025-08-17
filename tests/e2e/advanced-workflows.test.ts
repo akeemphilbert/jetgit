@@ -3,7 +3,7 @@ import { GitMenuProvider } from '../../src/providers/gitMenuProvider';
 import { ContextMenuProvider } from '../../src/providers/contextMenuProvider';
 import { DiffViewer } from '../../src/views/diffViewer';
 import { ConflictResolver } from '../../src/services/conflictResolver';
-import { StatusIntegrationService } from '../../src/services/statusIntegrationService';
+import { StatusBarService } from '../../src/services/statusBarService';
 
 // Mock VS Code API
 jest.mock('vscode', () => ({
@@ -106,7 +106,7 @@ describe('Advanced End-to-End Workflow Tests', () => {
   let contextMenuProvider: ContextMenuProvider;
   let diffViewer: DiffViewer;
   let conflictResolver: ConflictResolver;
-  let statusService: StatusIntegrationService;
+  let statusService: StatusBarService;
   let mockContext: any;
 
   beforeEach(() => {
@@ -118,7 +118,9 @@ describe('Advanced End-to-End Workflow Tests', () => {
     contextMenuProvider = new ContextMenuProvider(gitService);
     diffViewer = new DiffViewer(gitService);
     conflictResolver = new ConflictResolver();
-    statusService = new StatusIntegrationService(mockContext);
+    // Reset singleton
+    (StatusBarService as any).instance = undefined;
+    statusService = StatusBarService.getInstance(gitService);
   });
 
   describe('Complex Branch Management Workflows', () => {

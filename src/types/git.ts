@@ -1,3 +1,5 @@
+import * as vscode from 'vscode';
+
 /**
  * Core Git data models and interfaces
  */
@@ -10,6 +12,15 @@ export interface CommitInfo {
   shortHash: string;
 }
 
+export interface Repository {
+  rootUri: vscode.Uri;
+  name: string;
+  currentBranch?: string;
+  ahead?: number;
+  behind?: number;
+  hasChanges: boolean;
+}
+
 export interface Branch {
   name: string;
   fullName: string;
@@ -19,6 +30,7 @@ export interface Branch {
   ahead?: number;
   behind?: number;
   lastCommit?: CommitInfo;
+  lastAccessed?: Date; // For MRU tracking
 }
 
 export interface BranchGroup {

@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import { GitService } from './services/gitService';
-import { GitMenuController } from './providers/gitMenuController';
+import { MenuController } from './providers/gitMenuController';
 import { ContextMenuProvider } from './providers/contextMenuProvider';
 import { DiffViewer } from './views/diffViewer';
 import { DialogService } from './services/dialogService';
-import { StatusIntegrationService } from './services/statusIntegrationService';
+import { StatusBarService } from './services/statusBarService';
 import { CommandRegistrationService } from './services/commandRegistrationService';
 import { FeedbackService } from './services/feedbackService';
+import { RepoContextService } from './services/repoContextService';
 
 /**
  * JetGit Extension - JetBrains IDE-style Git functionality for VS Code
@@ -21,8 +22,8 @@ import { FeedbackService } from './services/feedbackService';
 /** Core Git service for repository operations */
 let gitService: GitService;
 
-/** Controller for the main Git menu and branch hierarchy */
-let gitMenuController: GitMenuController;
+/** Controller for the JetBrains-style QuickPick menu */
+let menuController: MenuController;
 
 /** Provider for context menu Git operations */
 let contextMenuProvider: ContextMenuProvider;
@@ -33,14 +34,17 @@ let diffViewer: DiffViewer;
 /** Service for user input dialogs and prompts */
 let dialogService: DialogService;
 
-/** Service for VS Code status bar and Git integration */
-let statusIntegrationService: StatusIntegrationService;
+/** Service for single status bar entry with JetBrains-style functionality */
+let statusBarService: StatusBarService;
 
 /** Service for registering and managing VS Code commands */
 let commandRegistrationService: CommandRegistrationService;
 
 /** Service for user feedback and progress notifications */
 let feedbackService: FeedbackService;
+
+/** Service for repository context management and MRU tracking */
+let repoContextService: RepoContextService;
 
 /**
  * Activates the JetGit extension
@@ -64,23 +68,26 @@ export function activate(context: vscode.ExtensionContext) {
     try {
         // Initialize core services
         feedbackService = new FeedbackService();
+        repoContextService = RepoContextService.getInstance(context);
         gitService = new GitService(feedbackService);
         dialogService = new DialogService();
 
         // Initialize UI components
-        gitMenuController = new GitMenuController(gitService);
+        menuController = new MenuController(gitService, repoContextService);
         contextMenuProvider = new ContextMenuProvider(gitService);
         diffViewer = new DiffViewer(context);
 
         // Initialize VS Code integration services
-        statusIntegrationService = new StatusIntegrationService(gitService);
+        statusBarService = StatusBarService.getInstance(gitService);
+        statusBarService.init();
+        
         commandRegistrationService = new CommandRegistrationService(
             gitService,
-            gitMenuController,
+            menuController,
             contextMenuProvider,
             diffViewer,
             dialogService,
-            statusIntegrationService
+            statusBarService
         );
 
         // Register all commands through the command registration service
@@ -89,7 +96,8 @@ export function activate(context: vscode.ExtensionContext) {
         // Add services to context subscriptions for proper cleanup
         context.subscriptions.push(
             feedbackService,
-            statusIntegrationService,
+            repoContextService,
+            statusBarService,
             commandRegistrationService
         );
 
@@ -132,12 +140,16 @@ export function deactivate() {
             feedbackService.dispose();
         }
         
-        if (statusIntegrationService) {
-            statusIntegrationService.dispose();
+        if (statusBarService) {
+            statusBarService.dispose();
         }
         
         if (commandRegistrationService) {
             commandRegistrationService.dispose();
+        }
+        
+        if (repoContextService) {
+            repoContextService.dispose();
         }
         
         if (diffViewer) {
@@ -146,11 +158,12 @@ export function deactivate() {
         
         // Clear references
         gitService = undefined as any;
-        gitMenuController = undefined as any;
+        menuController = undefined as any;
         contextMenuProvider = undefined as any;
         diffViewer = undefined as any;
         dialogService = undefined as any;
-        statusIntegrationService = undefined as any;
+        repoContextService = undefined as any;
+        statusBarService = undefined as any;
         commandRegistrationService = undefined as any;
         
         console.log('JetGit Extension deactivated successfully');

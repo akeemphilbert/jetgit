@@ -4,7 +4,7 @@ import { GitMenuController } from '../../../src/providers/gitMenuController';
 import { ContextMenuProvider } from '../../../src/providers/contextMenuProvider';
 import { DiffViewer } from '../../../src/views/diffViewer';
 import { DialogService } from '../../../src/services/dialogService';
-import { StatusIntegrationService } from '../../../src/services/statusIntegrationService';
+import { StatusBarService } from '../../../src/services/statusBarService';
 import * as vscode from 'vscode';
 
 // Mock VS Code API
@@ -41,7 +41,7 @@ describe('CommandRegistrationService', () => {
   let mockContextMenuProvider: jest.Mocked<ContextMenuProvider>;
   let mockDiffViewer: jest.Mocked<DiffViewer>;
   let mockDialogService: jest.Mocked<DialogService>;
-  let mockStatusService: jest.Mocked<StatusIntegrationService>;
+  let mockStatusService: jest.Mocked<StatusBarService>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -104,7 +104,7 @@ describe('CommandRegistrationService', () => {
       service.registerAllCommands(mockContext);
 
       // Should register main commands, branch commands, file commands, and utility commands
-      expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(16); // 7 main + 5 branch + 2 file + 2 utility
+      expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(16); // 7 main + 5 branch + 2 file + 2 utility (removed duplicate jetgit.showGitMenu)
       expect(mockContextMenuProvider.registerCommands).toHaveBeenCalledWith(mockContext);
     });
 

@@ -105,3 +105,74 @@ This VS Code extension will provide JetBrains IDE-style Git functionality, inclu
 3. WHEN the extension is installed THEN the system SHALL register appropriate command palette entries
 4. WHEN keyboard shortcuts are used THEN the system SHALL respect existing VS Code Git shortcuts
 5. WHEN the extension is disabled THEN the system SHALL cleanly remove all UI elements and commands
+
+### Requirement 8
+
+**User Story:** As a developer, I want a single status bar entry that opens a JetBrains-style QuickPick menu, so that I can access Git operations efficiently without cluttering the status bar.
+
+#### Acceptance Criteria
+
+1. WHEN the extension is active THEN the system SHALL display exactly one status bar item for Git operations
+2. WHEN in a single repository THEN the status bar SHALL show `$(git-branch) <branch-name>` with dirty/ahead/behind indicators
+3. WHEN in multiple repositories THEN the status bar SHALL show `$(repo) <repo-count> repos • <active-branch>`
+4. WHEN the status bar item is clicked THEN the system SHALL open a QuickPick menu with JetBrains-style layout
+5. WHEN the QuickPick opens THEN the system SHALL display within 150ms for repositories with ≤5k commits
+6. WHEN using keyboard navigation THEN the system SHALL support Up/Down/Enter keys and Esc to close
+7. WHEN typing in the QuickPick THEN the system SHALL support type-ahead filtering of branches and actions
+8. WHEN the status bar is disabled via settings THEN the system SHALL hide the status bar item
+
+### Requirement 9
+
+**User Story:** As a developer, I want a QuickPick menu that adapts to single-repo vs multi-repo workspaces, so that I can work efficiently in different project structures.
+
+#### Acceptance Criteria
+
+1. WHEN in a single repository THEN the QuickPick SHALL display single-repo layout with search placeholder "Search for branches and actions"
+2. WHEN in single-repo mode THEN the system SHALL show top actions: Update Project…, Commit…, Push…, New Branch…, Checkout Tag or Revision…
+3. WHEN in single-repo mode THEN the system SHALL show sections: Recent, Local (grouped), Remote (grouped by remote), Tags
+4. WHEN in multiple repositories THEN the QuickPick SHALL display multi-repo layout with repo grid
+5. WHEN any repo has diverged THEN the system SHALL show warning banner "⚠ Branches have diverged"
+6. WHEN in multi-repo mode THEN the system SHALL show repo grid with folder icons, names, current branches, and divergence badges
+7. WHEN in multi-repo mode THEN the system SHALL show Common Local Branches and Common Remote Branches sections
+8. WHEN a repo item is selected THEN the system SHALL drill into that repo's single-repo layout view
+9. WHEN branches are displayed THEN the system SHALL show divergence indicators `↑n`/`↓m` where applicable
+10. WHEN the current branch is shown THEN the system SHALL mark it with ⭐ icon
+
+### Requirement 10
+
+**User Story:** As a developer, I want an SCM view that lists branches and changelists in a tree structure, so that I can have persistent access to Git information.
+
+#### Acceptance Criteria
+
+1. WHEN the SCM view is enabled THEN the system SHALL display "Git (JetBrains)" view in the SCM panel
+2. WHEN the SCM view is displayed THEN the system SHALL show tree sections: Recent, Local, Remote, Tags
+3. WHEN changelists are enabled THEN the system SHALL show additional Changelists section
+4. WHEN the SCM view is active THEN the system SHALL show title actions: repo switcher, refresh, create branch
+5. WHEN changelists are enabled THEN the system SHALL show additional "new changelist" title action
+6. WHEN the SCM view is disabled via settings THEN the system SHALL hide the entire view
+7. WHEN context menus are opened in SCM view THEN the system SHALL mirror QuickPick actions
+8. WHEN repository changes occur THEN the system SHALL refresh the SCM view automatically
+
+### Requirement 11
+
+**User Story:** As a developer, I want repository context management that tracks active repositories and provides switching capabilities, so that I can work efficiently in multi-repo workspaces.
+
+#### Acceptance Criteria
+
+1. WHEN multiple repositories are detected THEN the system SHALL provide repository switching capabilities
+2. WHEN the active repository changes THEN the system SHALL emit change events to update UI components
+3. WHEN repositories are listed THEN the system SHALL provide listRepositories(), getActiveRepository(), setActiveRepository() methods
+4. WHEN repository context changes THEN the system SHALL update status bar text and QuickPick content
+5. WHEN MRU (Most Recently Used) branches are tracked THEN the system SHALL persist per-repo MRU in globalState with cap at 20
+
+### Requirement 12
+
+**User Story:** As a developer, I want configurable settings for the new Git surfaces, so that I can customize the experience to my preferences.
+
+#### Acceptance Criteria
+
+1. WHEN jbGit.statusBar.enabled is false THEN the system SHALL hide the status bar item
+2. WHEN jbGit.scmView.enabled is false THEN the system SHALL hide the SCM view
+3. WHEN jbGit.updateProject.mode is set THEN the system SHALL respect "pull", "pullRebase", or "fetchRebaseInteractive" modes
+4. WHEN jbGit.showChangelists is false THEN the system SHALL hide changelist-related UI elements
+5. WHEN settings change THEN the system SHALL update UI components immediately without requiring restart

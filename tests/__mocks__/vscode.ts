@@ -89,6 +89,32 @@ export const QuickPickItemKind = {
   Default: 0,
 };
 
+export class EventEmitter<T> {
+  private listeners: Array<(e: T) => void> = [];
+  
+  get event() {
+    return (listener: (e: T) => void) => {
+      this.listeners.push(listener);
+      return {
+        dispose: () => {
+          const index = this.listeners.indexOf(listener);
+          if (index !== -1) {
+            this.listeners.splice(index, 1);
+          }
+        }
+      };
+    };
+  }
+  
+  fire(data: T): void {
+    this.listeners.forEach(listener => listener(data));
+  }
+  
+  dispose(): void {
+    this.listeners = [];
+  }
+}
+
 // Mock extension context
 export const mockExtensionContext = {
   subscriptions: [],
